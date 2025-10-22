@@ -25,9 +25,6 @@ static const char* PASS = "esproam1"; // set password if required
 WebServer server(80);
 
 
-
-// Helper removed: using Adafruit_MCP3008.readADC(channel) instead
-
 // HTTP handler for /values - returns JSON with adc readings
 void handleValues() {
     String json = "{";
@@ -126,9 +123,9 @@ void setup() {
     Serial.println("HTTP server started on port 80");
 
     // Initialize SPI and Adafruit MCP3008 (use hardware SPI pins)
-    SPI.begin();
-    // (uint8_t sck, uint8_t mosi, uint8_t miso, uint8_t cs);
-    if (!mcp.begin(MCP_SCK_PIN, MCP_MOSI_PIN, MCP_MISO_PIN, MCP_CS_PIN)) {
+    SPI.begin(MCP_SCK_PIN, MCP_MISO_PIN, MCP_MOSI_PIN, MCP_CS_PIN);
+    //if (!mcp.begin(MCP_SCK_PIN, MCP_MOSI_PIN, MCP_MISO_PIN, MCP_CS_PIN)) {
+    if (!mcp.begin(MCP_CS_PIN, &SPI)) {
         Serial.println("Failed to initialize MCP3008");
     } else {
         Serial.println("MCP3008 initialized");
