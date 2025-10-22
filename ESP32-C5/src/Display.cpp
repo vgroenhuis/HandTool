@@ -12,8 +12,6 @@ void display_setup() {
     u8g2.enableUTF8Print(); // Enable UTF-8 support for Arduino print functions
     u8g2.clearBuffer();
     u8g2.setFont(u8g2_font_ncenR08_tr);
-    //u8g2.setFont(u8g2_font_courR08_tr);
-    
     u8g2.drawStr(0,0,"HandTool Display");
     u8g2.sendBuffer();
     Serial.printf("Display initialized\n");

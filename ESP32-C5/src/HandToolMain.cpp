@@ -1,10 +1,8 @@
-// HandTool.cpp
-// Minimal ESP32-C5 web server: print MAC to Serial, connect to SSID "iotroam" and serve a simple page.
-
 #include <Arduino.h>
 #include "HandWifi.h"
 #include "ToolModel.h"
 #include "Display.h"
+#include "Files.h"
 
 void setup() {
     Serial.begin(115200);

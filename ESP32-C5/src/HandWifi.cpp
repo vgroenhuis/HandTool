@@ -45,7 +45,8 @@ void handleRoot() {
     String mac = WiFi.macAddress();
     String ip = WiFi.localIP().toString();
         // Use a raw string literal for the HTML and replace placeholders with runtime values
-        static const char html_template[] = R"MY_STRING(<!doctype html>
+        static const char html_template[] = R"MY_STRING(
+<!doctype html>
 <html>
     <head>
         <meta charset='utf-8'>

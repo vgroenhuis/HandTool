@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>6-DOF Robot Arm (D-H ready)</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+        html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1020; color: #e6e9ef; font-family: system-ui, Segoe UI, Roboto, Arial, sans-serif; }
+        #ui {
+            position: absolute; top: 8px; left: 8px; right: 8px; max-width: 560px;
+            background: rgba(10,12,20,0.7); border: 1px solid #2a2f45; border-radius: 8px; padding: 10px 12px;
+            display: grid; grid-template-columns: auto 1fr 84px; gap: 8px 10px; align-items: center; backdrop-filter: blur(3px);
+        }
+        #ui h1 { grid-column: 1 / -1; font-size: 16px; margin: 0 0 2px 0; font-weight: 600; color: #c9d2f0; }
+        #ui .rowLabel { white-space: nowrap; font-size: 13px; opacity: 0.9; }
+        #ui input[type="range"] { width: 100%; }
+        #ui input[type="number"] {
+            width: 84px; box-sizing: border-box; background: #0e1428; border: 1px solid #37405f; border-radius: 4px; color: #e6e9ef; padding: 4px 6px;
+        }
+        #ui .foot { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; justify-content: space-between; font-size: 12px; opacity: 0.85; }
+        #pose { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+        a.btn {
+            color: #d4e0ff; text-decoration: none; background: #243055; border: 1px solid #3d4c79; padding: 4px 8px; border-radius: 4px; font-size: 12px;
+        }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <h1>6‑DOF Robot Arm (D‑H parameters ready)</h1>
+        <span class="rowLabel">J1</span>
+        <input id="j1" type="range" min="-180" max="180" step="0.1" value="0">
+        <input id="j1n" type="number" min="-180" max="180" step="0.1" value="0">
+        <span class="rowLabel">J2</span>
+        <input id="j2" type="range" min="-180" max="180" step="0.1" value="0">
+        <input id="j2n" type="number" min="-180" max="180" step="0.1" value="0">
+        <span class="rowLabel">J3</span>
+        <input id="j3" type="range" min="-180" max="180" step="0.1" value="0">
+        <input id="j3n" type="number" min="-180" max="180" step="0.1" value="0">
+        <span class="rowLabel">J4</span>
+        <input id="j4" type="range" min="-180" max="180" step="0.1" value="0">
+        <input id="j4n" type="number" min="-180" max="180" step="0.1" value="0">
+        <span class="rowLabel">J5</span>
+        <input id="j5" type="range" min="-180" max="180" step="0.1" value="0">
+        <input id="j5n" type="number" min="-180" max="180" step="0.1" value="0">
+        <span class="rowLabel">J6</span>
+        <input id="j6" type="range" min="-180" max="180" step="0.1" value="0">
+        <input id="j6n" type="number" min="-180" max="180" step="0.1" value="0">
+        <div class="foot">
+            <div id="pose">EE: (0.000, 0.000, 0.000) m</div>
+            <div>
+                <a class="btn" href="javascript:void(0)" id="resetViewBtn">Reset View</a>
+                <a class="btn" href="javascript:void(0)" id="resetJointsBtn">Zero Joints</a>
+            </div>
+        </div>
+    </div>
+
+        <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+            }
+        }
+        </script>
+        <script type="module">
+            import * as THREE from 'three';
+            import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0b1020);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.01, 200);
+        camera.position.set(0.9, 0.7, 1.2);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.target.set(0, 0.25, 0);
+
+        // Lights
+        const amb = new THREE.AmbientLight(0xffffff, 0.65);
+        scene.add(amb);
+        const dir = new THREE.DirectionalLight(0xffffff, 0.85);
+        dir.position.set(3, 5, 2);
+        scene.add(dir);
+        const hemi = new THREE.HemisphereLight(0x7bb3ff, 0x223355, 0.35);
+        scene.add(hemi);
+
+        // Ground
+        const grid = new THREE.GridHelper(4, 40, 0x2a3a6a, 0x1b2a4e);
+        grid.position.y = 0;
+        scene.add(grid);
+        const baseAxes = new THREE.AxesHelper(0.12);
+        baseAxes.position.set(0, 0, 0);
+        scene.add(baseAxes);
+
+        // Robot container
+        const robot = new THREE.Group();
+        scene.add(robot);
+
+        // DH parameters (default placeholders). Units: meters, degrees.
+        // Replace later via robotAPI.setDH([...]).
+        let dh = [
+            { a: 0, alphaDeg: -90, d: 0.0625, thetaDeg: 0 },  // Joint 1
+            { a: 0, alphaDeg: 0,  d: 0.09375, thetaDeg: 0 },  // Joint 2
+            { a: 0.09375, alphaDeg: 0,  d: 0, thetaDeg: 0 },  // Joint 3
+            { a: 0.00, alphaDeg: 90, d: 0.10, thetaDeg: 0 },  // Joint 4
+            { a: 0.00, alphaDeg: -90,d: 0.00, thetaDeg: 0 },  // Joint 5
+            { a: 0.00, alphaDeg: 0,  d: 0.08, thetaDeg: 0 },  // Joint 6
+        ];
+        let qDeg = [0, 0, 0, 0, 0, 0]; // six joint angles (degrees)
+
+        // Visual elements
+        const jointSpheres = [];
+        const linkCylinders = [];
+        const frameAxes = []; // optional small axes at joints
+        const eeAxes = new THREE.AxesHelper(0.10);
+        robot.add(eeAxes);
+
+        // Materials and geometries
+        const sphereGeo = new THREE.SphereGeometry(0.018, 20, 16);
+        const jointMat = new THREE.MeshStandardMaterial({ color: 0x7cc7ff, metalness: 0.2, roughness: 0.4 });
+
+        const cylGeo = new THREE.CylinderGeometry(0.014, 0.014, 1, 18, 1, false);
+        const linkMat = new THREE.MeshStandardMaterial({ color: 0x7e89ff, metalness: 0.35, roughness: 0.3 });
+
+        // Build visuals
+        for (let i = 0; i < 7; i++) {
+            const s = new THREE.Mesh(sphereGeo, jointMat);
+            robot.add(s);
+            jointSpheres.push(s);
+
+            const ax = new THREE.AxesHelper(0.06);
+            robot.add(ax);
+            frameAxes.push(ax);
+
+            if (i < 6) {
+                const cyl = new THREE.Mesh(cylGeo, linkMat);
+                cyl.castShadow = true;
+                cyl.receiveShadow = true;
+                robot.add(cyl);
+                linkCylinders.push(cyl);
+            }
+        }
+
+        // Base pedestal (just visual)
+        const base = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.08, 0.10, 0.06, 24),
+            new THREE.MeshStandardMaterial({ color: 0x334060, metalness: 0.5, roughness: 0.6 })
+        );
+        base.position.y = 0.03;
+        scene.add(base);
+
+        // Math helpers
+        const deg2rad = d => d * Math.PI / 180;
+        const rad2deg = r => r * 180 / Math.PI;
+
+        function dhLinkMatrix(a, alpha, d, theta) {
+            // Standard DH: Rz(theta) Tz(d) Tx(a) Rx(alpha)
+            const ca = Math.cos(alpha), sa = Math.sin(alpha);
+            const ct = Math.cos(theta), st = Math.sin(theta);
+            // 4x4 as THREE.Matrix4
+            return new THREE.Matrix4().set(
+                ct, -st * ca,  st * sa, a * ct,
+                st,  ct * ca, -ct * sa, a * st,
+                 0,       sa,       ca,      d,
+                 0,        0,        0,      1
+            );
+        }
+
+        function normalizeDH(input) {
+            // Accepts alphaDeg/thetaDeg or alpha/theta in radians
+            return input.map(j => {
+                const a = Number(j.a ?? 0);
+                const d = Number(j.d ?? 0);
+                const alpha = (j.alpha != null) ? Number(j.alpha) : deg2rad(Number(j.alphaDeg ?? 0));
+                const theta0 = (j.theta != null) ? Number(j.theta) : deg2rad(Number(j.thetaDeg ?? 0));
+                return { a, d, alpha, theta0 };
+            });
+        }
+
+        function computeFK(dhParamsNorm, qDegrees) {
+            const Tlist = []; // cumulative transforms 0..6
+            const origins = []; // Vector3 positions 0..6
+            let T = new THREE.Matrix4().identity();
+            Tlist.push(T.clone());
+            origins.push(new THREE.Vector3(0, 0, 0).applyMatrix4(T));
+            for (let i = 0; i < 6; i++) {
+                const { a, d, alpha, theta0 } = dhParamsNorm[i];
+                const theta = theta0 + deg2rad(qDegrees[i] ?? 0);
+                const A = dhLinkMatrix(a, alpha, d, theta);
+                T = T.clone().multiply(A);
+                Tlist.push(T.clone());
+                const p = new THREE.Vector3(0, 0, 0).applyMatrix4(T);
+                origins.push(p);
+            }
+            return { Tlist, origins };
+        }
+
+        function alignCylinder(cyl, p1, p2) {
+            const v = new THREE.Vector3().subVectors(p2, p1);
+            const L = v.length();
+            if (L < 1e-6) {
+                cyl.visible = false;
+                return;
+            }
+            cyl.visible = true;
+            const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+            cyl.position.copy(mid);
+            // geometry oriented along +Y; align Y to v
+            cyl.scale.set(1, L, 1);
+            const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), v.clone().normalize());
+            cyl.setRotationFromQuaternion(q);
+        }
+
+        function updateRobot() {
+            const dhN = normalizeDH(dh);
+            const { Tlist, origins } = computeFK(dhN, qDeg);
+
+            // Joints and frames
+            for (let i = 0; i < origins.length; i++) {
+                jointSpheres[i].position.copy(origins[i]);
+                frameAxes[i].position.copy(origins[i]);
+                // Orient axes by rotation part of T
+                const R = new THREE.Matrix4().extractRotation(Tlist[i]);
+                const q = new THREE.Quaternion().setFromRotationMatrix(R);
+                frameAxes[i].quaternion.copy(q);
+            }
+
+            // Links
+            for (let i = 0; i < 6; i++) {
+                alignCylinder(linkCylinders[i], origins[i], origins[i + 1]);
+            }
+
+            // EE axes at end-effector
+            eeAxes.position.copy(origins[6]);
+            const Ree = new THREE.Matrix4().extractRotation(Tlist[6]);
+            eeAxes.quaternion.setFromRotationMatrix(Ree);
+
+            // Pose text
+            const p = origins[6];
+            document.getElementById('pose').textContent =
+                `EE: (${p.x.toFixed(3)}, ${p.y.toFixed(3)}, ${p.z.toFixed(3)}) m`;
+        }
+
+        // UI wiring
+        const sliders = [1,2,3,4,5,6].map(i => document.getElementById(`j${i}`));
+        const numbers = [1,2,3,4,5,6].map(i => document.getElementById(`j${i}n`));
+
+        function syncPair(i, sourceIsSlider) {
+            const s = sliders[i], n = numbers[i];
+            if (sourceIsSlider) n.value = s.value;
+            else s.value = n.value;
+            qDeg[i] = Number(s.value);
+            updateRobot();
+        }
+        sliders.forEach((el, i) => el.addEventListener('input', () => syncPair(i, true)));
+        numbers.forEach((el, i) => el.addEventListener('input', () => syncPair(i, false)));
+
+        document.getElementById('resetViewBtn').onclick = () => {
+            controls.target.set(0, 0.25, 0);
+            camera.position.set(0.9, 0.7, 1.2);
+            controls.update();
+        };
+        document.getElementById('resetJointsBtn').onclick = () => {
+            qDeg = [0,0,0,0,0,0];
+            sliders.forEach((s, i) => { s.value = 0; numbers[i].value = 0; });
+            updateRobot();
+        };
+
+        // Public API for external control
+        // Usage:
+        //   robotAPI.setDH([{a, d, alphaDeg, thetaDeg}, ... 6 items ...]);
+        //   robotAPI.setJointAngles([deg1..deg6]);
+        //   robotAPI.setAnglesRad([rad1..rad6]);
+        //   robotAPI.getEndEffectorPose()
+        window.robotAPI = {
+            setDH: (params) => { if (!Array.isArray(params) || params.length !== 6) return;
+                dh = params.map(p => ({ ...p })); updateRobot(); },
+            getDH: () => dh.map(p => ({ ...p })),
+            setJointAngles: (anglesDeg) => {
+                for (let i = 0; i < 6; i++) {
+                    const v = Number(anglesDeg[i] ?? 0);
+                    qDeg[i] = v;
+                    sliders[i].value = String(v);
+                    numbers[i].value = String(v);
+                }
+                updateRobot();
+            },
+            setAnglesRad: (anglesRad) => {
+                const degs = anglesRad.map(rad2deg);
+                window.robotAPI.setJointAngles(degs);
+            },
+            setAngle: (i, deg) => {
+                if (i < 0 || i > 5) return;
+                qDeg[i] = Number(deg);
+                sliders[i].value = String(deg);
+                numbers[i].value = String(deg);
+                updateRobot();
+            },
+            getEndEffectorPose: () => {
+                const dhN = normalizeDH(dh);
+                const { Tlist, origins } = computeFK(dhN, qDeg);
+                const T = Tlist[6].toArray();
+                const p = origins[6];
+                return { position: { x: p.x, y: p.y, z: p.z }, matrix4x4: T };
+            }
+        };
+
+        // Initial render
+        updateRobot();
+
+        // Render loop
+        renderer.setAnimationLoop(() => {
+            controls.update();
+            renderer.render(scene, camera);
+        });
+
+        // Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Expose THREE for quick debugging in console if needed
+        window.THREE = THREE;
+    </script>
+</body>
+</html>
