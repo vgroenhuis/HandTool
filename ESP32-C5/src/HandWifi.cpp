@@ -1,29 +1,32 @@
-// HandTool.cpp
-// Minimal ESP32-C5 web server: print MAC to Serial, connect to SSID "iotroam" and serve a simple page.
-
-#include <Arduino.h>
+#include "HandWifi.h"
 #include <WiFi.h>
 #include <WebServer.h>
-#include <SPI.h>
-#include <Adafruit_MCP3008.h>
-
-// MCP3008 configuration (SPI)
-const int MCP_MOSI_PIN = 8;
-const int MCP_MISO_PIN = 7;
-const int MCP_SCK_PIN  = 6;
-const int MCP_CS_PIN = 10;
-
-// Read buffer for channels
-volatile uint16_t adc_values[8] = {0};
-
-// Adafruit MCP3008 instance
-Adafruit_MCP3008 mcp;
+#include <Arduino.h>
+#include "ToolModel.h"
 
 static const char* SSID = "iotroam";
-static const char* PASS = "esproam1"; // set password if required
+static const char* PASS = "esproam1";
+static const char* HOSTNAME = "HandTool";
+
+static unsigned long s_lastReconnect = 0;
 
 WebServer server(80);
 
+const char* wifi_mac() {
+    static String m;
+    m = WiFi.macAddress();
+    return m.c_str();
+}
+
+const char* wifi_ip() {
+    static String ip;
+    ip = WiFi.localIP().toString();
+    return ip.c_str();
+}
+
+bool wifi_is_connected() {
+    return WiFi.status() == WL_CONNECTED;
+}
 
 // HTTP handler for /values - returns JSON with adc readings
 void handleValues() {
@@ -71,7 +74,7 @@ void handleRoot() {
             }catch(e){ console.error(e); }
         }
         fetchValues();
-        setInterval(fetchValues,1000);
+        setInterval(fetchValues,100);
         </script>
     </body>
 </html>
@@ -83,35 +86,27 @@ void handleRoot() {
     server.send(200, "text/html", body);
 }
 
-void setup() {
-    Serial.begin(115200);
-    //delay(100);
+void wifi_setup() {
+    Serial.printf("MAC address: %s\n", wifi_mac());
+    Serial.printf("Connecting to SSID: %s\n", SSID);
 
-    // Start WiFi in station mode and connect
     WiFi.mode(WIFI_STA);
     WiFi.setSleep(false);
     WiFi.setBandMode(WIFI_BAND_MODE_5G_ONLY);
+    WiFi.setHostname(HOSTNAME);
+    if (SSID && PASS) WiFi.begin(SSID, PASS);
 
-    // WiFi.disconnect(true); // clear prior configs
-    //delay(100);
-
-    // Print MAC address to Serial
-    String mac = WiFi.macAddress();
-    Serial.printf("MAC address: %s\n", mac.c_str());
-
-    Serial.printf("Connecting to SSID: %s\n", SSID);
-    WiFi.begin(SSID, PASS);
-
+    // small wait for initial connect
     unsigned long start = millis();
-    const unsigned long timeout = 20000; // 20 seconds
-    while (WiFi.status() != WL_CONNECTED && (millis() - start) < timeout) {
-        Serial.print(".");
+    const unsigned long timeout = 10000;
+    while (!wifi_is_connected() && (millis() - start) < timeout) {
+        Serial.print('.');
         delay(500);
     }
     Serial.println();
 
-    if (WiFi.status() == WL_CONNECTED) {
-        Serial.printf("Connected! IP address: %s\n", WiFi.localIP().toString().c_str());
+    if (wifi_is_connected()) {
+        Serial.printf("Connected! IP address: %s\n", wifi_ip());
     } else {
         Serial.println("Failed to connect within timeout.");
     }
@@ -120,45 +115,17 @@ void setup() {
     server.on("/", handleRoot);
     server.on("/values", handleValues);
     server.begin();
-    Serial.println("HTTP server started on port 80");
-
-    // Initialize SPI and Adafruit MCP3008 (use hardware SPI pins)
-    SPI.begin(MCP_SCK_PIN, MCP_MISO_PIN, MCP_MOSI_PIN, MCP_CS_PIN);
-    //if (!mcp.begin(MCP_SCK_PIN, MCP_MOSI_PIN, MCP_MISO_PIN, MCP_CS_PIN)) {
-    if (!mcp.begin(MCP_CS_PIN, &SPI)) {
-        Serial.println("Failed to initialize MCP3008");
-    } else {
-        Serial.println("MCP3008 initialized");
-    }
+    Serial.println("HTTP server started on port 80");    
 }
 
-void loop() {
+void wifi_loop() {
     server.handleClient();
 
-    static unsigned long lastRead = 0;
-    if (millis() - lastRead >= 1000) {
-        lastRead = millis();
-        // Read all 8 MCP3008 channels
-        for (uint8_t ch = 0; ch < 8; ++ch) {
-            adc_values[ch] = mcp.readADC(ch);
-        }
-        // Print ADC readings to Serial
-        Serial.print("ADC:");
-        for (uint8_t ch = 0; ch < 8; ++ch) {
-            Serial.printf(" CH%u=%u", ch, adc_values[ch]);
-        }
-        Serial.println();
-    }
-
-    // Simple auto-reconnect if disconnected
+    // simple auto-reconnect logic
     if (WiFi.status() != WL_CONNECTED) {
-        static unsigned long lastAttempt = 0;
-        if (millis() - lastAttempt > 5000) { // try every 5s
-            lastAttempt = millis();
-            Serial.println("Reconnecting to WiFi...");
-            WiFi.begin(SSID, PASS);
+        if (millis() - s_lastReconnect > 5000) {
+            s_lastReconnect = millis();
+            if (SSID && PASS) WiFi.begin(SSID, PASS);
         }
     }
-
-    delay(1);
 }
