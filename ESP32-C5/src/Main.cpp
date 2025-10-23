@@ -3,13 +3,16 @@
 #include "ToolModel.h"
 #include "Display.h"
 #include "Files.h"
+#include "Kinematics.h"
 
 void setup() {
     Serial.begin(115200);
     delay(100);
 
+    init_file_system();
     display_setup();
     robot_setup();
+    kinematics_init();
     wifi_setup();
 }
 
@@ -28,7 +31,7 @@ void printValuesPeriodically() {
 
 void loop() {
     sensors_loop();
-    display_loop(); // 30 ms
+    //display_loop(); // 30 ms
     //printValuesPeriodically();
     wifi_loop();
     delay(1);

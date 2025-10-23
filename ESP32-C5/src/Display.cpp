@@ -17,6 +17,14 @@ void display_setup() {
     Serial.printf("Display initialized\n");
 }
 
+void update_display() {
+    u8g2.clearBuffer();
+    u8g2.setCursor(0, 10);
+    u8g2.printf("IP: %s", wifi_ip());        
+    u8g2.sendBuffer();
+}
+
+
 void display_loop() {
     static int lastUpdate = 0;
     if (millis() - lastUpdate >= 100) {    
@@ -34,4 +42,11 @@ void display_loop() {
         u8g2.printf("Time: %0.1f s", millis() / 1000.0f);
         u8g2.sendBuffer();
     }
+}
+
+void display_message(String msg) {
+    u8g2.clearBuffer();
+    u8g2.setCursor(0, 10);
+    u8g2.print(msg);
+    u8g2.sendBuffer();
 }
