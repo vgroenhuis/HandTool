@@ -100,12 +100,29 @@
         baseAxes.position.set(0, 0, 0);
         scene.add(baseAxes);
 
-        // Robot container
-        const robot = new THREE.Group();
-        scene.add(robot);
+    // Robot container (robot frame: Z-up). Three.js uses Y-up, so we create
+    // a root group that rotates the robot frame by -90 degrees around X
+    // before the first robot link to convert Z-up -> Y-up.
+    const robot = new THREE.Group();
+    const robotRoot = new THREE.Group();
+    // rotate -90 degrees about X axis: convert robot Z-up frame into Three.js Y-up frame
+    robotRoot.rotation.x = -Math.PI / 2;
+    robotRoot.add(robot);
+    scene.add(robotRoot);
 
         // DH parameters (default placeholders). Units: meters, degrees.
         // Replace later via robotAPI.setDH([...]).
+
+
+        let dh = [
+            { a: 0      , alphaDeg: -90, d: 0.0625, thetaDeg: 0 },
+            { a: 0.09375, alphaDeg: 0, d: 0     , thetaDeg: -90 },
+            { a: 0.09375, alphaDeg: 0, d: 0     , thetaDeg: 90 },
+            { a: 0      , alphaDeg: -90, d: -0.01533, thetaDeg: -90 },
+            { a: 0      , alphaDeg: 90, d: 0.01533   , thetaDeg: 90 },
+            { a: 0      , alphaDeg: 0, d: -0.04073   , thetaDeg: 90 },
+        ];
+/*    
         let dh = [
             { a: 0, alphaDeg: -90, d: 0.0625, thetaDeg: 0 },  // Joint 1
             { a: 0, alphaDeg: 0,  d: 0.09375, thetaDeg: 0 },  // Joint 2
@@ -114,6 +131,7 @@
             { a: 0.00, alphaDeg: -90,d: 0.00, thetaDeg: 0 },  // Joint 5
             { a: 0.00, alphaDeg: 0,  d: 0.08, thetaDeg: 0 },  // Joint 6
         ];
+*/
         let qDeg = [0, 0, 0, 0, 0, 0]; // six joint angles (degrees)
 
         // Visual elements
@@ -151,10 +169,10 @@
 
         // Base pedestal (just visual)
         const base = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.08, 0.10, 0.06, 24),
+            new THREE.CylinderGeometry(0.09, 0.09, 0.005, 24),
             new THREE.MeshStandardMaterial({ color: 0x334060, metalness: 0.5, roughness: 0.6 })
         );
-        base.position.y = 0.03;
+        base.position.y = 0.0025;
         scene.add(base);
 
         // Math helpers
