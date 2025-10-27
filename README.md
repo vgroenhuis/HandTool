@@ -5,6 +5,8 @@ Handheld 6 DOF input device for robot control applications.
 
 [Original size](pics/HandTool_Main.jpg?raw=true)
 
-[Assembly instructions](https://github.com/vgroenhuis/HandTool/tree/main/CAD/v1_2024)
+[Assembly instructions](main/CAD/v1_2024)
 
-[Beest.roaming.utwente.nl](http://beest.roaming.utwente.nl/)
+## Phyiscal devices
+
+First HandTool at RaM [Beest.roaming.utwente.nl](http://beest.roaming.utwente.nl/) (accessible from within University of Twente's network)
