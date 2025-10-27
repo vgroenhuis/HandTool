@@ -9,8 +9,8 @@
 #include "Kinematics.h"
 
 static const char* SSID = "iotroam";
-static const char* PASS = "esproam1";
-static const char* HOSTNAME = "HandTool";
+static const char* PASS = "beestroam";
+static const char* HOSTNAME = "Beest";
 
 static unsigned long s_lastReconnect = 0;
 
@@ -105,8 +105,8 @@ void handleRoot() {
             unsigned long elapsed = t1 - t0;
             Serial.printf("LittleFS: read /index.html %u bytes in %lu ms\n", (unsigned int)bytes, elapsed);
             // replace placeholders if present
-            body.replace("{{MAC}}", mac);
-            body.replace("{{IP}}", ip);
+            //body.replace("{{MAC}}", mac);
+            //body.replace("{{IP}}", ip);
             server.send(200, "text/html", body);
             return;
         } else {
