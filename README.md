@@ -5,7 +5,7 @@ Handheld 6 DOF input device for robot control applications.
 
 [Original size](pics/HandTool_Main.jpg?raw=true)
 
-[Assembly instructions](tree/main/CAD/v1_2024)
+[Assembly instructions](CAD/v1_2024)
 
 ## Phyiscal devices
 
