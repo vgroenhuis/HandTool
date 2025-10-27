@@ -1,6 +1,7 @@
 # HandTool
 Handheld 6 DOF input device for robot control applications.
 
-![HandTool main view](pics/HandTool_1000px.jpg)
+![HandTool main view](pics/HandTool_500px.jpg)
+[pics/HandTool.jpg](HandTool.jpg original size)
 
 [Beest.roaming.utwente.nl](http://beest.roaming.utwente.nl/)
