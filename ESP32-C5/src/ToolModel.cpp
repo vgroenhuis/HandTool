@@ -1,11 +1,11 @@
 #include "ToolModel.h"
 
 volatile uint16_t adc_values[8] = {0};
+volatile float filtered_adc[8] = {0};
 volatile float angles_deg[6] = {0.0};
 
 // Low-pass filter state (exponential moving average)
-static float filtered_adc[8] = {0};
-static bool filter_initialized = false;
+bool filter_initialized = false;
 
 // Adafruit MCP3008 instance
 Adafruit_MCP3008 mcp;
@@ -13,7 +13,6 @@ Adafruit_MCP3008 mcp;
 void robot_setup() {
     // Initialize SPI and Adafruit MCP3008 (use hardware SPI pins)
     SPI.begin(MCP_SCK_PIN, MCP_MISO_PIN, MCP_MOSI_PIN, MCP_CS_PIN);
-    //if (!mcp.begin(MCP_SCK_PIN, MCP_MOSI_PIN, MCP_MISO_PIN, MCP_CS_PIN)) {
     if (!mcp.begin(MCP_CS_PIN, &SPI)) {
         Serial.println("Failed to initialize MCP3008");
     } else {

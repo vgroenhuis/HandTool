@@ -9,8 +9,8 @@
 #include "Kinematics.h"
 
 static const char* SSID = "iotroam";
-static const char* PASS = "beestroam";
-static const char* HOSTNAME = "Beest";
+static const char* PASS = "handtool";
+static const char* HOSTNAME = "HandTool";
 
 static unsigned long s_lastReconnect = 0;
 
@@ -150,6 +150,7 @@ void wifi_setup() {
 
     // Start web server regardless (will still serve local info even if not connected)
     server.on("/", handleRoot);
+    server.on("/index.html", handleRoot);
     server.on("/rawAdcValues", handleRawAdcValues);
     server.on("/robotView.html", handleRobotView);
     server.on("/angles", handleAngles);
