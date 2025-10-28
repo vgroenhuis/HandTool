@@ -8,10 +8,6 @@
 #include "Display.h"
 #include "Kinematics.h"
 
-static const char* SSID = "iotroam";
-static const char* PASS = "handtool";
-static const char* HOSTNAME = "HandTool";
-
 static unsigned long s_lastReconnect = 0;
 
 WebServer server(80);
@@ -203,31 +199,38 @@ void wifi_loop() {
 
 // HTTP handler to serve the robotView.html file from LittleFS
 void handleRobotView() {
-    if (LittleFS.exists("/robotView.html")) {
-        File f = LittleFS.open("/robotView.html", "r");
-        if (f) {
-            String body = "";
-            unsigned long t0 = millis();
-            size_t bytes = 0;
-            while (f.available()) {
-                char c = (char)f.read();
-                body += c;
-                bytes++;
+    static String cachedRobotViewHtml = "";
+    static bool robotViewLoaded = false;
+
+    if (!robotViewLoaded) {
+        if (LittleFS.exists("/robotView.html")) {
+            File f = LittleFS.open("/robotView.html", "r");
+            if (f) {
+                cachedRobotViewHtml = "";
+                unsigned long t0 = millis();
+                size_t bytes = 0;
+                while (f.available()) {
+                    char c = (char)f.read();
+                    cachedRobotViewHtml += c;
+                    bytes++;
+                }
+                unsigned long t1 = millis();
+                f.close();
+                unsigned long elapsed = t1 - t0;
+                Serial.printf("LittleFS: read /robotView.html %u bytes in %lu ms (cached)\n", (unsigned int)bytes, elapsed);
+                robotViewLoaded = true;
+            } else {
+                Serial.println("Failed to open LittleFS /robotView.html!");
             }
-            unsigned long t1 = millis();
-            f.close();
-            unsigned long elapsed = t1 - t0;
-            Serial.printf("LittleFS: read /robotView.html %u bytes in %lu ms\n", (unsigned int)bytes, elapsed);
-            server.send(200, "text/html", body);
-            return;
         } else {
-            Serial.println("Failed to open LittleFS /robotView.html!");
+            Serial.println("LittleFS /robotView.html not found!");
         }
-    } else {
-        Serial.println("LittleFS /robotView.html not found!");
     }
 
-    // fallback: try to serve a minimal message
-    server.send(404, "text/plain", "robotView.html not found on LittleFS");
+    if (robotViewLoaded) {
+        server.send(200, "text/html", cachedRobotViewHtml);
+    } else {
+        server.send(404, "text/plain", "robotView.html not found on LittleFS");
+    }
 }
 

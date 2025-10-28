@@ -31,8 +31,8 @@ void printValuesPeriodically() {
 
 void loop() {
     sensors_loop();
-    //display_loop(); // 30 ms
+    display_loop();
     //printValuesPeriodically();
     wifi_loop();
-    delay(1);
+    //delay(1);
 }

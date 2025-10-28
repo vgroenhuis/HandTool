@@ -367,6 +367,12 @@
                 const r = await fetch('/angles');
                 if (!r.ok) return;
                 const j = await r.json();
+                
+                if (j.valid === false) {
+                    // Don't update sliders when data is invalid
+                    return;
+                }
+                
                 if (!j.angles || !Array.isArray(j.angles)) return;
                 // Apply angles (assume array length >=6)
                 const a = j.angles.slice(0,6).map(x => Number(x));

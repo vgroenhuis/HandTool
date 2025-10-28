@@ -6,9 +6,9 @@
 const int MCP_MOSI_PIN = 8;
 const int MCP_MISO_PIN = 7;
 const int MCP_SCK_PIN  = 6;
-const int MCP_CS_PIN = 10;
+const int MCP_CS_PIN = 9;
 
-const int ZERO_OFFSET[8] = {273, 488, 215, 530, 100, 485, 0, 0};
+const int ZERO_OFFSET[8] = {426, 488, 215, 530, 100, 485, 0, 0};
 const int JOINT_DIRECTIONS[6] = {1, -1, -1, 1, 1, -1};
 
 extern volatile uint16_t adc_values[8]; // raw

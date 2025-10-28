@@ -12,15 +12,14 @@
         <h2>External links</h2>
         <p><a href="https://github.com/vgroenhuis/HandTool" target="_blank">github.com/vgroenhuis/HandTool</a> Github repository with CAD files, sources, manual and assembly instructions</p>
         <h2>Links on this device</h2>
-        <p><a href="/">/</a> This page</p>
-        <p><a href="/index.html">/index.html</a> Also this page</p>
+        <p><a href="/index.html">/index.html</a> This page. Also accessible from <a href="/">/</a></p>
         <p><a href="/robotView.html">/robotView.html</a> Open Robot View (3D)</p>
         <p><a href="/angles">/angles</a> JSON structure with joint angles in degrees</p>
         <p><a href="/rawAdcValues">/rawAdcValues</a> JSON structure with raw ADC values</p>
         <p><a href="/fk">/fk</a> JSON structure with end-effector to robot coordinate transformation matrix</p>
         <h2>Joint angles (degrees)</h2>
         <div id="angles">Loading...</div>
-        <h2>Analog inputs (low-pass filtered)</h2>
+        <h2>Analog inputs (raw)</h2>
         <div id="adc">Loading...</div>
 
         <script>
@@ -29,6 +28,12 @@
                     const r = await fetch('/rawAdcValues');
                     const j = await r.json();
                     const el = document.getElementById('adc');
+                    
+                    if (j.valid === false) {
+                        el.innerHTML = '<p style="color:#d00;font-weight:bold;">⚠️ MCP3008 not detected - ADC data unavailable</p>';
+                        return;
+                    }
+                    
                     let html = '<ul>';
                     for(let i=0;i<8;i++) html += `<li>CH${i}: ${j.values[i]}</li>`;
                     html += '</ul>';
@@ -43,8 +48,14 @@
                     const r = await fetch('/angles');
                     if(!r.ok) return;
                     const j = await r.json();
-                    const a = Array.isArray(j.angles) ? j.angles : [];
                     const el = document.getElementById('angles');
+                    
+                    if (j.valid === false) {
+                        el.innerHTML = '<p style="color:#d00;font-weight:bold;">⚠️ MCP3008 not detected - Joint angles unavailable</p>';
+                        return;
+                    }
+                    
+                    const a = Array.isArray(j.angles) ? j.angles : [];
                     if(a.length >= 6){
                         el.innerHTML = `<ul>
                             <li>J1: ${Number(a[0]).toFixed(2)}&deg;</li>
