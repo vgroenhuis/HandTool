@@ -35,6 +35,9 @@ bool wifi_is_connected() {
 // HTTP handler for /rawAdcValues - returns JSON with raw ADC readings
 void handleRawAdcValues() {
     String json = "{";
+    json += "\"valid\": ";
+    json += mcp3008_present ? "true" : "false";
+    json += ",";
     json += "\"values\": [";
     for (int i = 0; i < 8; ++i) {
         json += String(adc_values[i]);
@@ -48,6 +51,9 @@ void handleRawAdcValues() {
 // HTTP handler for /angles - returns JSON with six joint angles in degrees
 void handleAngles() {
     String json = "{";
+    json += "\"valid\": ";
+    json += mcp3008_present ? "true" : "false";
+    json += ",";
     json += "\"angles\": [";
     for (int i = 0; i < 6; ++i) {
         // angles_deg may be volatile floats
@@ -68,14 +74,33 @@ void handleForwardKinematics() {
     }
     
     // Compute forward kinematics
-    Matrix4x4 T = compute_forward_kinematics(joint_angles);
-    
-    // Build JSON response with 4x4 matrix (row-major)
+    Matrix4x4 T;
+    // Initialize to identity matrix
+    for (int i = 0; i < 16; ++i) T.m[i] = 0.0f;
+    T.m[0] = 1.0f;
+    T.m[5] = 1.0f;
+    T.m[10] = 1.0f;
+    T.m[15] = 1.0f;
+
+    if (mcp3008_present) {
+        T = compute_forward_kinematics(joint_angles);
+    }
+
+    // Build JSON response with 4x4 matrix structure
     String json = "{";
+    json += "\"valid\": ";
+    json += mcp3008_present ? "true" : "false";
+    json += ",";
     json += "\"matrix\": [";
-    for (int i = 0; i < 16; ++i) {
-        json += String(T.m[i], 6);  // 6 decimal places
-        if (i < 15) json += ",";
+    for (int row = 0; row < 4; ++row) {
+        json += "[";
+        for (int col = 0; col < 4; ++col) {
+            int idx = row * 4 + col;  // row-major indexing
+            json += String(T.m[idx], 6);  // 6 decimal places
+            if (col < 3) json += ",";
+        }
+        json += "]";
+        if (row < 3) json += ",";
     }
     json += "]";
     json += "}";
@@ -84,36 +109,38 @@ void handleForwardKinematics() {
 }
 
 void handleRoot() {
-    String mac = WiFi.macAddress();
-    String ip = WiFi.localIP().toString();
-    // First try to serve a static file from LittleFS: /index.html
-    String body;
-    if (LittleFS.exists("/index.html")) {
-        File f = LittleFS.open("/index.html", "r");
-        if (f) {
-            // read entire file into body while timing the operation
-            body = "";
-            unsigned long t0 = millis();
-            size_t bytes = 0;
-            while (f.available()) {
-                char c = (char)f.read();
-                body += c;
-                bytes++;
+    static String cachedIndexHtml = "";
+    static bool isLoaded = false;
+    
+    // Load the file only once
+    if (!isLoaded) {
+        if (LittleFS.exists("/index.html")) {
+            File f = LittleFS.open("/index.html", "r");
+            if (f) {
+                // read entire file into cachedIndexHtml
+                cachedIndexHtml = "";
+                size_t bytes = 0;
+                while (f.available()) {
+                    char c = (char)f.read();
+                    cachedIndexHtml += c;
+                    bytes++;
+                }
+                f.close();
+                Serial.printf("LittleFS: read /index.html %u bytes (cached)\n");
+                isLoaded = true;
+            } else {
+                Serial.println("Failed to open LittleFS /index.html!");
             }
-            unsigned long t1 = millis();
-            f.close();
-            unsigned long elapsed = t1 - t0;
-            Serial.printf("LittleFS: read /index.html %u bytes in %lu ms\n", (unsigned int)bytes, elapsed);
-            // replace placeholders if present
-            //body.replace("{{MAC}}", mac);
-            //body.replace("{{IP}}", ip);
-            server.send(200, "text/html", body);
-            return;
         } else {
-            Serial.println("Failed to open LittleFS /index.html!");
+            Serial.println("LittleFS /index.html not found!");
         }
+    }
+    
+    // Serve the cached content
+    if (isLoaded) {
+        server.send(200, "text/html", cachedIndexHtml);
     } else {
-        Serial.println("LittleFS /index.html not found!");
+        server.send(404, "text/plain", "index.html not found");
     }
 }
 
@@ -121,14 +148,16 @@ void handleRoot() {
 void handleRobotView();
 
 void wifi_setup() {
+    WiFi.mode(WIFI_STA);
+
     Serial.printf("MAC address: %s\n", wifi_mac());
     Serial.printf("Connecting to SSID: %s\n", SSID);
     display_message("Connecting to " + String(SSID));
 
-    WiFi.mode(WIFI_STA);
     WiFi.setSleep(false);
     WiFi.setBandMode(WIFI_BAND_MODE_5G_ONLY);
     WiFi.setHostname(HOSTNAME);
+
     if (SSID && PASS) WiFi.begin(SSID, PASS);
 
     // small wait for initial connect
@@ -156,7 +185,7 @@ void wifi_setup() {
     server.on("/angles", handleAngles);
     server.on("/fk", handleForwardKinematics);
     server.begin();
-    Serial.println("HTTP server started on port 80");
+    Serial.printf("HTTP server started on port 80\n");
 }
 
 void wifi_loop() {
