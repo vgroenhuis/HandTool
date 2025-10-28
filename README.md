@@ -38,8 +38,8 @@ The HandTool was first developed in 2024 to actuate a robot arm with identical k
 Upcoming features
 
 - Button on stick to allow start/stop dragging for robot control
-- Base: deeper recess for M6 screws so that counterweight cannot collide with screw heads
 - Dedicated PCB for electronics
+- Calibrate zero position in software, saving offsets in filesystem
 - Additional communication protocols
   - Examples: Bluetooth, MQTT, ROS2, Serial, ...
   - Want to implement it yourself? Clone the repository, implement it and make a pull request!
@@ -47,4 +47,5 @@ Upcoming features
 
 ## Phyiscal devices
 
-First HandTool at RaM [Beest.roaming.utwente.nl](http://beest.roaming.utwente.nl/) (accessible from within University of Twente's network)
+First HandTool at RaM [handtool.roaming.utwente.nl](http://handtool.roaming.utwente.nl/) (accessible from within University of Twente's network)
+
