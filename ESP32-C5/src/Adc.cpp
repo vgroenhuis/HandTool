@@ -1,4 +1,4 @@
-#include "ToolModel.h"
+#include "Adc.h"
 
 uint16_t raw_adc[8] = {0};
 //uint16_t adc_values[8] = {0};

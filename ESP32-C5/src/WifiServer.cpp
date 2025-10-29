@@ -1,10 +1,9 @@
-#include "HandWifi.h"
+#include "WifiServer.h"
 #include <WiFi.h>
 #include <WebServer.h>
 #include <Arduino.h>
-#include "ToolModel.h"
+#include "Adc.h"
 #include <LittleFS.h>
-#include "Files.h"
 #include "Display.h"
 #include "Kinematics.h"
 

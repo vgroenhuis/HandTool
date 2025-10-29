@@ -1,6 +1,5 @@
 #pragma once
 #include <Arduino.h>
-#include <Geometry.h>
 
 // DH parameters structure
 struct DHParams {

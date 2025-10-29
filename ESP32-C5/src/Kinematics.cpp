@@ -15,60 +15,52 @@ void kinematics_init() {
     // DH parameters are statically initialized, nothing to do here
 }
 
-// Helper: multiply two 4x4 matrices (C = A * B)
-static void matrix_multiply(const float A[16], const float B[16], float C[16]) {
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
-            C[i*4 + j] = 0.0;
+// Helper: multiply two 4x4 matrices (row-major)
+static void matrix_multiply(const Matrix4x4& A, const Matrix4x4& B, Matrix4x4& result) {
+    float temp[16];
+    for (int row = 0; row < 4; row++) {
+        for (int col = 0; col < 4; col++) {
+            temp[row * 4 + col] = 0.0;
             for (int k = 0; k < 4; k++) {
-                C[i*4 + j] += A[i*4 + k] * B[k*4 + j];
+                temp[row * 4 + col] += A.m[row * 4 + k] * B.m[k * 4 + col];
             }
         }
     }
+    memcpy(result.m, temp, sizeof(temp));
 }
 
-// Helper: create 4x4 identity matrix
-static void matrix_identity(float M[16]) {
-    for (int i = 0; i < 16; i++) M[i] = 0.0;
-    M[0] = M[5] = M[10] = M[15] = 1.0;
+// Helper: create identity matrix
+static void matrix_identity(Matrix4x4& mat) {
+    for (int i = 0; i < 16; i++) {
+        mat.m[i] = 0.0;
+    }
+    mat.m[0] = mat.m[5] = mat.m[10] = mat.m[15] = 1.0;
 }
 
 // Helper: compute DH transformation matrix
 // Standard DH: T = Rz(theta) * Tz(d) * Tx(a) * Rx(alpha)
-static void dh_transform(float a, float alpha_rad, float d, float theta_rad, float T[16]) {
-    float ca = cos(alpha_rad);
-    float sa = sin(alpha_rad);
+static Matrix4x4 dh_transform(float a, float alpha_rad, float d, float theta_rad) {
+    Matrix4x4 T;
+    
     float ct = cos(theta_rad);
     float st = sin(theta_rad);
+    float ca = cos(alpha_rad);
+    float sa = sin(alpha_rad);
     
-    // Row-major 4x4 matrix
-    T[0]  = ct;
-    T[1]  = -st * ca;
-    T[2]  = st * sa;
-    T[3]  = a * ct;
+    // Combined DH matrix (row-major)
+    T.m[0] = ct;           T.m[1] = -st * ca;      T.m[2] = st * sa;       T.m[3] = a * ct;
+    T.m[4] = st;           T.m[5] = ct * ca;       T.m[6] = -ct * sa;      T.m[7] = a * st;
+    T.m[8] = 0;            T.m[9] = sa;            T.m[10] = ca;           T.m[11] = d;
+    T.m[12] = 0;           T.m[13] = 0;            T.m[14] = 0;            T.m[15] = 1;
     
-    T[4]  = st;
-    T[5]  = ct * ca;
-    T[6]  = -ct * sa;
-    T[7]  = a * st;
-    
-    T[8]  = 0.0;
-    T[9]  = sa;
-    T[10] = ca;
-    T[11] = d;
-    
-    T[12] = 0.0;
-    T[13] = 0.0;
-    T[14] = 0.0;
-    T[15] = 1.0;
+    return T;
 }
 
 Matrix4x4 compute_forward_kinematics(const float joint_angles[6]) {
-    Matrix4x4 result;
-    float T[16], A[16], temp[16];
+    Matrix4x4 result, temp;
     
-    // Initialize with identity matrix
-    matrix_identity(T);
+    // Start with identity matrix
+    matrix_identity(result);
     
     // Multiply DH transformations for each joint
     for (int i = 0; i < 6; i++) {
@@ -77,20 +69,11 @@ Matrix4x4 compute_forward_kinematics(const float joint_angles[6]) {
         float theta_rad = (dh_params[i].theta_deg + joint_angles[i]) * M_PI / 180.0;
         
         // Compute DH transformation for this joint
-        dh_transform(dh_params[i].a, alpha_rad, dh_params[i].d, theta_rad, A);
+        Matrix4x4 A = dh_transform(dh_params[i].a, alpha_rad, dh_params[i].d, theta_rad);
         
-        // Multiply: T = T * A
-        matrix_multiply(T, A, temp);
-        
-        // Copy result back to T
-        for (int j = 0; j < 16; j++) {
-            T[j] = temp[j];
-        }
-    }
-    
-    // Copy final transformation to result
-    for (int i = 0; i < 16; i++) {
-        result.m[i] = T[i];
+        // Multiply: result = result * A
+        matrix_multiply(result, A, temp);
+        result = temp;
     }
     
     return result;

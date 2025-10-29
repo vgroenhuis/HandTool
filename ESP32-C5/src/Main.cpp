@@ -1,9 +1,17 @@
 #include <Arduino.h>
-#include "HandWifi.h"
-#include "ToolModel.h"
+#include "WifiServer.h"
+#include "Adc.h"
 #include "Display.h"
-#include "Files.h"
 #include "Kinematics.h"
+#include <LittleFS.h>
+
+void init_file_system() {
+    if (!LittleFS.begin(true)) {
+        Serial.println("LittleFS Mount Failed");
+    } else {
+        Serial.println("LittleFS Mounted Successfully");
+    }
+}
 
 void setup() {
     Serial.begin(115200);
