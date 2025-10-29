@@ -46,7 +46,7 @@ Upcoming features
  
 ## Device status
 
-Vincent's HandTool: ![Device1 status]([https://img.shields.io/endpoint?url=https://www.vincentgroenhuis.nl/devices/HandTool_status.php](https://img.shields.io/endpoint?url=https%3A%2F%2Fwww.vincentgroenhuis.nl%2Fdevices%2FHandTool_status.php)
+Vincent's HandTool: ![Device1 status](https://img.shields.io/endpoint?url=https%3A%2F%2Fwww.vincentgroenhuis.nl%2Fdevices%2FHandTool_status.php)
 
 
 ## Phyiscal devices
