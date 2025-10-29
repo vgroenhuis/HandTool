@@ -92,6 +92,8 @@ void update_display() {
     u8g2.setCursor(0,40);
     u8g2.printf("X:%.1f Y:%.1f Z:%.1f", T.m[3]*1000, T.m[7]*1000, T.m[11]*1000);
 
+    u8g2.setCursor(0,50);
+
     // u8g2.setCursor(0,30);
     // u8g2.printf("%.0f  %.0f  %.0f  %.0f  %.0f  %.0f",
     //     angles_deg[0], angles_deg[1], angles_deg[2],

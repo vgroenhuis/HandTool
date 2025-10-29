@@ -1,9 +1,11 @@
 #include "ToolModel.h"
 
-volatile uint16_t adc_values[8] = {0};
-volatile float filtered_adc[8] = {0};
-volatile float angles_deg[6] = {0.0};
-volatile bool mcp3008_present = false;
+uint16_t raw_adc[8] = {0};
+//uint16_t adc_values[8] = {0};
+float filtered_adc[8] = {0};
+float angles_deg[6] = {0.0};
+bool mcp3008_present = false;
+bool dragButtonPressed = false; // state of drag button
 
 // Low-pass filter state (exponential moving average)
 bool filter_initialized = false;
@@ -97,7 +99,8 @@ void sensors_loop() {
         // Read all 8 MCP3008 channels and apply low-pass filter
         for (uint8_t ch = 0; ch < 8; ++ch) {
             uint16_t raw_value = mcp.readADC(ch);
-            
+            raw_adc[ch] = raw_value;  // Store raw ADC value
+
             // Initialize filter on first read
             if (!filter_initialized) {
                 filtered_adc[ch] = raw_value;
@@ -107,13 +110,13 @@ void sensors_loop() {
             }
             
             // Store filtered value
-            adc_values[ch] = (uint16_t)(filtered_adc[ch] + 0.5);  // Round to nearest integer
+            //adc_values[ch] = (uint16_t)(filtered_adc[ch] + 0.5);  // Round to nearest integer
             
             if (ch < 6) {
                 angles_deg[ch] = JOINT_DIRECTIONS[ch] * (filtered_adc[ch] - ZERO_OFFSET[ch]) * 270.0 / 1024.0;  // Convert to degrees
             }
         }
-        
+        dragButtonPressed = (raw_adc[6] < 512);
         filter_initialized = true;
     }    
 }

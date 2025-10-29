@@ -2,7 +2,7 @@
 <html>
     <head>
         <meta charset='utf-8'>
-        <title>ESP32-C5</title>
+        <title>HandTool</title>
         <meta name="viewport" content="width=device-width,initial-scale=1">
         <style>body{font-family:Arial,Helvetica,sans-serif;margin:12px;}img{border:1px solid #ddd;padding:4px;background:#fff}</style>
     </head>
@@ -21,29 +21,11 @@
         <div id="angles">Loading...</div>
         <h2>Analog inputs (raw)</h2>
         <div id="adc">Loading...</div>
+        <h2>Analog inputs (filtered)</h2>
+        <div id="adc_filtered">Loading...</div>
 
         <script>
-            async function fetchValues(){
-                try{
-                    const r = await fetch('/rawAdcValues');
-                    const j = await r.json();
-                    const el = document.getElementById('adc');
-                    
-                    if (j.valid === false) {
-                        el.innerHTML = '<p style="color:#d00;font-weight:bold;">⚠️ MCP3008 not detected - ADC data unavailable</p>';
-                        return;
-                    }
-                    
-                    let html = '<ul>';
-                    for(let i=0;i<8;i++) html += `<li>CH${i}: ${j.values[i]}</li>`;
-                    html += '</ul>';
-                    el.innerHTML = html;
-                }catch(e){ console.error(e); }
-            }
-            fetchValues();
-            setInterval(fetchValues,100);
-
-            async function fetchAngles(){
+           async function fetchAngles(){
                 try{
                     const r = await fetch('/angles');
                     if(!r.ok) return;
@@ -72,6 +54,46 @@
             }
             fetchAngles();
             setInterval(fetchAngles, 100);
+
+            async function fetchValuesRaw(){
+                try{
+                    const r = await fetch('/rawAdcValues');
+                    const j = await r.json();
+                    const el = document.getElementById('adc');
+                    
+                    if (j.valid === false) {
+                        el.innerHTML = '<p style="color:#d00;font-weight:bold;">⚠️ MCP3008 not detected - ADC data unavailable</p>';
+                        return;
+                    }
+                    
+                    let html = '<ul>';
+                    for(let i=0;i<8;i++) html += `<li>CH${i}: ${j.values[i]}</li>`;
+                    html += '</ul>';
+                    el.innerHTML = html;
+                }catch(e){ console.error(e); }
+            }
+            fetchValuesRaw();
+            setInterval(fetchValuesRaw,100);
+
+             async function fetchValuesFiltered(){
+                try{
+                    const r = await fetch('/filteredAdcValues');
+                    const j = await r.json();
+                    const el = document.getElementById('adc_filtered');
+                    
+                    if (j.valid === false) {
+                        el.innerHTML = '<p style="color:#d00;font-weight:bold;">⚠️ MCP3008 not detected - ADC data unavailable</p>';
+                        return;
+                    }
+                    
+                    let html = '<ul>';
+                    for(let i=0;i<8;i++) html += `<li>CH${i}: ${j.values[i]}</li>`;
+                    html += '</ul>';
+                    el.innerHTML = html;
+                }catch(e){ console.error(e); }
+            }
+            fetchValuesFiltered();
+            setInterval(fetchValuesFiltered,100);
         </script>
     </body>
 </html>

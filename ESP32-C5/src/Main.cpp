@@ -21,9 +21,9 @@ void printValuesPeriodically() {
     if (millis() - lastPrinted >= 1000) {
         lastPrinted = millis();
         // Print ADC readings to Serial
-        Serial.print("ADC:");
+        Serial.print("Raw ADC:");
         for (uint8_t ch = 0; ch < 8; ++ch) {
-            Serial.printf(" CH%u=%u", ch, adc_values[ch]);
+            Serial.printf(" CH%u=%u", ch, raw_adc[ch]);
         }
         Serial.println();
     }

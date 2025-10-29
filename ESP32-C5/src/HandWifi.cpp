@@ -36,7 +36,22 @@ void handleRawAdcValues() {
     json += ",";
     json += "\"values\": [";
     for (int i = 0; i < 8; ++i) {
-        json += String(adc_values[i]);
+        json += String(raw_adc[i]);
+        if (i < 7) json += ",";
+    }
+    json += "]";
+    json += "}";
+    server.send(200, "application/json", json);
+}
+
+void handleFilteredAdcValues() {
+    String json = "{";
+    json += "\"valid\": ";
+    json += mcp3008_present ? "true" : "false";
+    json += ",";
+    json += "\"values\": [";
+    for (int i = 0; i < 8; ++i) {
+        json += String(filtered_adc[i]);
         if (i < 7) json += ",";
     }
     json += "]";
@@ -49,6 +64,9 @@ void handleAngles() {
     String json = "{";
     json += "\"valid\": ";
     json += mcp3008_present ? "true" : "false";
+    json += ",";
+    json += "\"dragButtonPressed\": ";
+    json += dragButtonPressed ? "true" : "false";
     json += ",";
     json += "\"angles\": [";
     for (int i = 0; i < 6; ++i) {
@@ -86,6 +104,9 @@ void handleForwardKinematics() {
     String json = "{";
     json += "\"valid\": ";
     json += mcp3008_present ? "true" : "false";
+    json += ",";
+    json += "\"dragButtonPressed\": ";
+    json += dragButtonPressed ? "true" : "false";
     json += ",";
     json += "\"matrix\": [";
     for (int row = 0; row < 4; ++row) {
@@ -177,6 +198,7 @@ void wifi_setup() {
     server.on("/", handleRoot);
     server.on("/index.html", handleRoot);
     server.on("/rawAdcValues", handleRawAdcValues);
+    server.on("/filteredAdcValues", handleFilteredAdcValues);
     server.on("/robotView.html", handleRobotView);
     server.on("/angles", handleAngles);
     server.on("/fk", handleForwardKinematics);
