@@ -17,12 +17,12 @@ void kinematics_init() {
 
 // Helper: multiply two 4x4 matrices (row-major)
 static void matrix_multiply(const Matrix4x4& A, const Matrix4x4& B, Matrix4x4& result) {
-    float temp[16];
+    float temp[4][4];
     for (int row = 0; row < 4; row++) {
         for (int col = 0; col < 4; col++) {
-            temp[row * 4 + col] = 0.0;
+            temp[row][col] = 0.0;
             for (int k = 0; k < 4; k++) {
-                temp[row * 4 + col] += A.m[row * 4 + k] * B.m[k * 4 + col];
+                temp[row][col] += A.m[row][k] * B.m[k][col];
             }
         }
     }
@@ -31,10 +31,11 @@ static void matrix_multiply(const Matrix4x4& A, const Matrix4x4& B, Matrix4x4& r
 
 // Helper: create identity matrix
 static void matrix_identity(Matrix4x4& mat) {
-    for (int i = 0; i < 16; i++) {
-        mat.m[i] = 0.0;
+    for (int row = 0; row < 4; row++) {
+        for (int col = 0; col < 4; col++) {
+            mat.m[row][col] = (row == col) ? 1.0 : 0.0;
+        }
     }
-    mat.m[0] = mat.m[5] = mat.m[10] = mat.m[15] = 1.0;
 }
 
 // Helper: compute DH transformation matrix
@@ -47,11 +48,11 @@ static Matrix4x4 dh_transform(float a, float alpha_rad, float d, float theta_rad
     float ca = cos(alpha_rad);
     float sa = sin(alpha_rad);
     
-    // Combined DH matrix (row-major)
-    T.m[0] = ct;           T.m[1] = -st * ca;      T.m[2] = st * sa;       T.m[3] = a * ct;
-    T.m[4] = st;           T.m[5] = ct * ca;       T.m[6] = -ct * sa;      T.m[7] = a * st;
-    T.m[8] = 0;            T.m[9] = sa;            T.m[10] = ca;           T.m[11] = d;
-    T.m[12] = 0;           T.m[13] = 0;            T.m[14] = 0;            T.m[15] = 1;
+    // Combined DH matrix
+    T.m[0][0] = ct;        T.m[0][1] = -st * ca;   T.m[0][2] = st * sa;    T.m[0][3] = a * ct;
+    T.m[1][0] = st;        T.m[1][1] = ct * ca;    T.m[1][2] = -ct * sa;   T.m[1][3] = a * st;
+    T.m[2][0] = 0;         T.m[2][1] = sa;         T.m[2][2] = ca;         T.m[2][3] = d;
+    T.m[3][0] = 0;         T.m[3][1] = 0;          T.m[3][2] = 0;          T.m[3][3] = 1;
     
     return T;
 }

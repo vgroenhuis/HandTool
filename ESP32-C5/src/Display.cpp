@@ -44,9 +44,10 @@ void display_setup() {
     }
     
     u8g2.begin();
-    u8g2.enableUTF8Print(); // Enable UTF-8 support for Arduino print functions
+    // u8g2.enableUTF8Print(); // Not needed for ASCII-only output; saves flash
     u8g2.clearBuffer();
-    u8g2.setFont(u8g2_font_ncenR08_tr);
+    // Use a very compact built-in font to reduce flash footprint
+    u8g2.setFont(u8g2_font_5x7_tr);
     u8g2.drawStr(0,0,"HandTool Display");
     u8g2.sendBuffer();
     Serial.printf("Display initialized\n");
@@ -79,18 +80,18 @@ void update_display() {
     // Compute forward kinematics
     Matrix4x4 T;
     // Initialize to identity matrix
-    for (int i = 0; i < 16; ++i) T.m[i] = 0.0f;
-    T.m[0] = 1.0f;
-    T.m[5] = 1.0f;
-    T.m[10] = 1.0f;
-    T.m[15] = 1.0f;
+    for (int row = 0; row < 4; ++row) {
+        for (int col = 0; col < 4; ++col) {
+            T.m[row][col] = (row == col) ? 1.0f : 0.0f;
+        }
+    }
 
     if (mcp3008_present) {
         T = compute_forward_kinematics(joint_angles);
     }
 
     u8g2.setCursor(0,40);
-    u8g2.printf("X:%.1f Y:%.1f Z:%.1f", T.m[3]*1000, T.m[7]*1000, T.m[11]*1000);
+    u8g2.printf("X:%.1f Y:%.1f Z:%.1f", T.m[0][3]*1000, T.m[1][3]*1000, T.m[2][3]*1000);
 
     u8g2.setCursor(0,50);
 

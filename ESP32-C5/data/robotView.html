@@ -417,7 +417,7 @@
         }
         // start polling but don't force it if the endpoint doesn't exist
         fetchAngles();
-        setInterval(fetchAngles, 50);
+        setInterval(fetchAngles, 100);
 
         // Render loop
         renderer.setAnimationLoop(() => {

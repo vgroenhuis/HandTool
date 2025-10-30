@@ -2,12 +2,15 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <Arduino.h>
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
 #include "Adc.h"
 #include <LittleFS.h>
 #include "Display.h"
 #include "Kinematics.h"
 
 static unsigned long s_lastReconnect = 0;
+static unsigned long s_lastStatusPing = 0;
 
 WebServer server(80);
 
@@ -89,11 +92,11 @@ void handleForwardKinematics() {
     // Compute forward kinematics
     Matrix4x4 T;
     // Initialize to identity matrix
-    for (int i = 0; i < 16; ++i) T.m[i] = 0.0f;
-    T.m[0] = 1.0f;
-    T.m[5] = 1.0f;
-    T.m[10] = 1.0f;
-    T.m[15] = 1.0f;
+    for (int row = 0; row < 4; ++row) {
+        for (int col = 0; col < 4; ++col) {
+            T.m[row][col] = (row == col) ? 1.0f : 0.0f;
+        }
+    }
 
     if (mcp3008_present) {
         T = compute_forward_kinematics(joint_angles);
@@ -111,8 +114,7 @@ void handleForwardKinematics() {
     for (int row = 0; row < 4; ++row) {
         json += "[";
         for (int col = 0; col < 4; ++col) {
-            int idx = row * 4 + col;  // row-major indexing
-            json += String(T.m[idx], 6);  // 6 decimal places
+            json += String(T.m[row][col], 6);  // 6 decimal places
             if (col < 3) json += ",";
         }
         json += "]";
@@ -214,6 +216,38 @@ void wifi_loop() {
             s_lastReconnect = millis();
             if (SSID && PASS) WiFi.begin(SSID, PASS);
             update_display();
+        }
+    }
+
+    // Periodically report device status every 10 seconds while connected
+    if (SEND_HEARTBEAT) {
+        if (wifi_is_connected()) {
+            unsigned long now = millis();
+            if (now - s_lastStatusPing >= 10000UL || s_lastStatusPing == 0) {
+                Serial.println("WiFi connected - sending heartbeat ping");
+                s_lastStatusPing = now;
+
+                static const char* kStatusUrl = "https://www.vincentgroenhuis.nl/devices/device_heartbeat.php?id=HandTool";
+
+                WiFiClientSecure client; // TLS required by server
+                client.setInsecure();    // Skip certificate validation to keep code small; still uses HTTPS transport
+                HTTPClient http;
+                if (http.begin(client, kStatusUrl)) {
+                    int code = http.GET();
+                    if (code > 0) {
+                        // Optionally read body (not required). Keep minimal to avoid heap churn.
+                        // String payload = http.getString();
+                        Serial.printf("Status ping OK (%d)\n", code);
+                    } else {
+                        Serial.printf("Status GET failed: %s\n", http.errorToString(code).c_str());
+                    }
+                    http.end();
+                } else {
+                    Serial.println("Status GET begin() failed");
+                }
+                unsigned long tm2 = millis();
+                Serial.printf("Status ping took %lu ms\n", tm2 - now);
+            }
         }
     }
 }

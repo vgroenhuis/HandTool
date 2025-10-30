@@ -8,7 +8,7 @@ const int MCP_MISO_PIN = 7;
 const int MCP_SCK_PIN  = 6;
 const int MCP_CS_PIN = 9;
 
-const int ZERO_OFFSET[8] = {426, 488, 215, 530, 95, 380, 0, 0};
+const int ZERO_OFFSET[8] = {470, 488, 215, 530, 95, 380, 0, 0};
 const int JOINT_DIRECTIONS[6] = {1, -1, -1, 1, 1, -1};
 
 extern uint16_t raw_adc[8]; // raw values

@@ -11,7 +11,7 @@ struct DHParams {
 
 // 4x4 transformation matrix (row-major storage)
 struct Matrix4x4 {
-    float m[16];  // row-major: [m00, m01, m02, m03, m10, m11, ...]
+    float m[4][4];  // 2D array: m[row][col]
 };
 
 // Initialize kinematics with DH parameters

@@ -1,7 +1,6 @@
 #include "Adc.h"
 
 uint16_t raw_adc[8] = {0};
-//uint16_t adc_values[8] = {0};
 float filtered_adc[8] = {0};
 float angles_deg[6] = {0.0};
 bool mcp3008_present = false;
@@ -86,7 +85,7 @@ void sensors_loop() {
     
     static unsigned long lastRead = 0;
     const unsigned long SAMPLE_INTERVAL_MS = 10;
-    const float TIME_CONSTANT = 0.1;  // 0.1 seconds
+    const float TIME_CONSTANT = 0.05;  // in seconds
     
     if (millis() - lastRead >= SAMPLE_INTERVAL_MS) {
         lastRead = millis();
@@ -108,9 +107,6 @@ void sensors_loop() {
                 // Exponential moving average: y[n] = alpha * x[n] + (1 - alpha) * y[n-1]
                 filtered_adc[ch] = alpha * raw_value + (1.0 - alpha) * filtered_adc[ch];
             }
-            
-            // Store filtered value
-            //adc_values[ch] = (uint16_t)(filtered_adc[ch] + 0.5);  // Round to nearest integer
             
             if (ch < 6) {
                 angles_deg[ch] = JOINT_DIRECTIONS[ch] * (filtered_adc[ch] - ZERO_OFFSET[ch]) * 270.0 / 1024.0;  // Convert to degrees

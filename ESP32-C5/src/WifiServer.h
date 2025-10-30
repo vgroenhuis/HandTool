@@ -1,5 +1,7 @@
 #pragma once
 
+#define SEND_HEARTBEAT false
+
 static const char* SSID = "iotroam";
 static const char* PASS = "handtool";
 static const char* HOSTNAME = "HandTool";
