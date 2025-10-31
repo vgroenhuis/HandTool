@@ -21,14 +21,14 @@ void init_file_system() {
 void setupHandTool() {
     Serial.begin(115200);
     delay(100);
-    rgbLedWrite(LED_BUILTIN, 100, 30, 0); // Orange during setup
+    rgbLedWrite(LED_BUILTIN, 30, 10, 0); // Orange during setup
     sleep_setup();
     init_file_system();
     display_setup();
     robot_setup();
     kinematics_init();
     wifi_setup();
-    rgbLedWrite(LED_BUILTIN, 0, 100, 0); // Green when setup complete
+    rgbLedWrite(LED_BUILTIN, 0, 10, 0); // Green when setup complete
 }
 
 

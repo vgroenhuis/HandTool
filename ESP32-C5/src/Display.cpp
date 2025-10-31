@@ -76,42 +76,21 @@ void update_display() {
     u8g2.printf("%s", WEB_ADDRESS);
     for (int i = 0; i < 6; i++) {
         u8g2.setCursor(i*20,30);
-        u8g2.printf("%.1f", angles_deg[i]);
+        u8g2.printf("%.0f", angles_deg[i]);
     }
 
-    // Prepare joint angles array to display end-effector XYZ
-    float joint_angles[6];
-    for (int i = 0; i < 6; ++i) {
-        joint_angles[i] = angles_deg[i];
-    }
-    
     // Compute forward kinematics
-    Matrix4x4 T;
-    // Initialize to identity matrix
-    for (int row = 0; row < 4; ++row) {
-        for (int col = 0; col < 4; ++col) {
-            T.m[row][col] = (row == col) ? 1.0f : 0.0f;
-        }
-    }
+    Matrix4x4 T = IDENTITY_MATRIX;
 
     if (mcp3008_present) {
-        T = compute_forward_kinematics(joint_angles);
+        T = compute_forward_kinematics(angles_deg);
     }
 
     u8g2.setCursor(0,40);
     u8g2.printf("X:%.1f Y:%.1f Z:%.1f", T.m[0][3]*1000, T.m[1][3]*1000, T.m[2][3]*1000);
 
     u8g2.setCursor(0,50);
-
-    // u8g2.setCursor(0,30);
-    // u8g2.printf("%.0f  %.0f  %.0f  %.0f  %.0f  %.0f",
-    //     angles_deg[0], angles_deg[1], angles_deg[2],
-    //     angles_deg[3], angles_deg[4], angles_deg[5]);
-    //u8g2.setCursor(0,40);
-    //u8g2.printf("%.1f Hz", 1000.0f / interval);
     u8g2.sendBuffer();
-
-    //lastUpdate = tm;
 }
 
 
@@ -122,21 +101,7 @@ void display_loop() {
     static int lastUpdate = 0;
     if (millis() - lastUpdate >= 100) {    
         lastUpdate = millis();
-
         update_display();
-/*
-        u8g2.clearBuffer();
-        u8g2.setCursor(0, 10);
-        u8g2.printf("IP: %s", wifi_ip());        
-
-        u8g2.setCursor(0, u8g2.getCursorY() + 12);
-        for (uint8_t ch = 0; ch < 6; ++ch) {
-            u8g2.printf("%u ", adc_values[ch]);
-        }
-        u8g2.setCursor(0, u8g2.getCursorY() + 12);
-        u8g2.printf("Time: %0.1f s", millis() / 1000.0f);
-        u8g2.sendBuffer();
-*/
     }
 }
 
