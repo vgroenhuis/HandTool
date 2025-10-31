@@ -21,7 +21,7 @@ void init_file_system() {
 void setupHandTool() {
     Serial.begin(115200);
     delay(100);
-    rgbLedWrite(LED_BUILTIN, 100, 64, 0); // Orange during setup
+    rgbLedWrite(LED_BUILTIN, 100, 30, 0); // Orange during setup
     sleep_setup();
     init_file_system();
     display_setup();

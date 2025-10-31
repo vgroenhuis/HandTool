@@ -13,6 +13,9 @@ static unsigned long s_lastReconnect = 0;
 static unsigned long s_lastStatusPing = 0;
 
 WebServer server(80);
+WiFiClientSecure client; // TLS required by server
+HTTPClient heartbeatHttp;
+bool heartbeatInitialized = false;
 
 const char* wifi_mac() {
     static String m;
@@ -243,6 +246,27 @@ void handleRobotView() {
     }
 }
 
+bool sendHeartBeat() {
+    //WiFiClientSecure client; // TLS required by server
+    //client.setInsecure();    // Skip certificate validation to keep code small; still uses HTTPS transport
+    //HTTPClient http;
+    //if (http.begin(client, HEARTBEAT_URL)) {
+    int code = heartbeatHttp.GET();
+    if (code > 0) {
+        // Optionally read body (not required). Keep minimal to avoid heap churn.
+        // String payload = http.getString();
+        //Serial.printf("Heartbeat ping OK (%d)\n", code);
+        return true;
+    } else {
+        Serial.printf("Heartbeat GET failed: %s\n", heartbeatHttp.errorToString(code).c_str());
+        return false;
+    }
+    //heartbeatHttp.end();
+    //} else {
+    //    Serial.println("Heartbeat GET begin() failed");
+    //}
+}
+
 
 void wifi_setup() {
     WiFi.mode(WIFI_STA);
@@ -285,6 +309,16 @@ void wifi_setup() {
     server.on("/allData", handleAllData);
     server.begin();
     Serial.printf("HTTP server started on port 80\n");
+
+    client.setInsecure();
+    if (heartbeatHttp.begin(client, HEARTBEAT_URL)) {
+        Serial.println("heartbeatHttp begin() success");
+        heartbeatInitialized = true;
+        heartbeatHttp.setReuse(true);
+    } else {
+        Serial.println("heartbeatHttp begin() failed!");
+        heartbeatInitialized = false;
+    }
 }
 
 void wifi_loop() {
@@ -300,36 +334,19 @@ void wifi_loop() {
     }
 
     // Periodically report device status every 10 seconds while connected
-    if (SEND_HEARTBEAT) {
-        if (wifi_is_connected()) {
-            unsigned long now = millis();
-            if (now - s_lastStatusPing >= 10000UL || s_lastStatusPing == 0) {
-                Serial.println("WiFi connected - sending heartbeat ping");
+    if (SEND_HEARTBEAT && heartbeatInitialized && wifi_is_connected()) {
+        unsigned long now = millis();
+        if (now - s_lastStatusPing >= 10000UL || s_lastStatusPing == 0) {
+            //Serial.println("WiFi connected - sending heartbeat ping");
+            
+            bool success = sendHeartBeat();
+            if (success) {
                 s_lastStatusPing = now;
-
-                static const char* kStatusUrl = "https://www.vincentgroenhuis.nl/devices/device_heartbeat.php?id=HandTool";
-
-                WiFiClientSecure client; // TLS required by server
-                client.setInsecure();    // Skip certificate validation to keep code small; still uses HTTPS transport
-                HTTPClient http;
-                if (http.begin(client, kStatusUrl)) {
-                    int code = http.GET();
-                    if (code > 0) {
-                        // Optionally read body (not required). Keep minimal to avoid heap churn.
-                        // String payload = http.getString();
-                        Serial.printf("Status ping OK (%d)\n", code);
-                    } else {
-                        Serial.printf("Status GET failed: %s\n", http.errorToString(code).c_str());
-                    }
-                    http.end();
-                } else {
-                    Serial.println("Status GET begin() failed");
-                }
-                unsigned long tm2 = millis();
-                Serial.printf("Status ping took %lu ms\n", tm2 - now);
+            }
+            unsigned long tm2 = millis();
+            if (success) {
+                Serial.printf("Heartbeat OK, ping took %lu ms\n", tm2 - now);
             }
         }
     }
 }
-
-
