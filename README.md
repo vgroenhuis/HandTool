@@ -50,5 +50,5 @@ Upcoming features
 
 First HandTool at RaM [handtool.roaming.utwente.nl](http://handtool.roaming.utwente.nl/) (accessible from within University of Twente's network)
 Status: ![Device1 status](https://img.shields.io/endpoint?url=https%3A%2F%2Fwww.vincentgroenhuis.nl%2Fdevices%2FHandTool_status.php)
-Status2: ![Device2 status](https://www.vincentgroenhuis.nl/devices/status_badge.php?id=HandTool)
+Status2: ![Device2 status](https://vincentgroenhuis.nl/devices/handtool_badge.php)
 
