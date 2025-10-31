@@ -44,12 +44,10 @@ Upcoming features
   - Examples: Bluetooth, MQTT, ROS2, Serial, ...
   - Want to implement it yourself? Clone the repository, implement it and make a pull request!
  
-## Device status
-
-![Device1 status](https://img.shields.io/endpoint?url=https%3A%2F%2Fwww.vincentgroenhuis.nl%2Fdevices%2FHandTool_status.php)
 
 
 ## Phyiscal devices
 
 First HandTool at RaM [handtool.roaming.utwente.nl](http://handtool.roaming.utwente.nl/) (accessible from within University of Twente's network)
 
+Status of Vincent's physical devices: see [this page](https://vincentgroenhuis.nl/devices/device_display.php).
