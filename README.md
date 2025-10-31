@@ -10,14 +10,14 @@ Handheld 6 DOF input device for robot control applications.
 
 ## Bill of Materials
 
-1. 6x potmeter: type R16148-1A-2-B10K or equivalent. 10K, linear.
+1. 6x potmeter: WH148 compatible, 10KΩ. I used R16148-1A-2-B10K.
 2. 6x ball bearing: 6700ZZ or equivalent. 15x10x4 mm.
 3. Brass tubes, outer diameter 7 mm, wall thickness 0.5 mm. Lengths: 54 mm, 76 mm, 90 mm.
 4. M3 threaded rod for small counterweight, 50 mm.
 5. M3 screw (cheese head) for large counterweight, 44 mm. (Use 50 mm, cut to length).
-6. Several M3 nuts
-7. M2 screw, 16 mm (to properly fix brass rods in joints)
-8. M6 screws for mounting the base (flat head)
+6. Several M3 nuts.
+7. M2 screw, 16 mm (to properly fix brass rods in joints).
+8. M6 screws for mounting the base (flat head).
 
 ## Assembly instructions
 
