@@ -14,6 +14,17 @@ struct Matrix4x4 {
     float m[4][4];  // 2D array: m[row][col]
 };
 
+const Matrix4x4 IDENTITY_MATRIX = {
+    {
+        {1.0, 0.0, 0.0, 0.0},
+        {0.0, 1.0, 0.0, 0.0},
+        {0.0, 0.0, 1.0, 0.0},
+        {0.0, 0.0, 0.0, 1.0}
+    }
+};
+
+//void matrix_identity(Matrix4x4& mat);
+
 // Initialize kinematics with DH parameters
 void kinematics_init();
 

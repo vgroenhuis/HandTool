@@ -382,8 +382,11 @@
             frameAxes.forEach(ax => ax.visible = visible);
         });
 
-        // Optional: poll /angles endpoint every 1s and update joint sliders if present
+        // Optional: poll /angles endpoint and update joint sliders if present
         let autoUpdateEnabled = true;
+        let fetchInterval = 100; // desired interval in ms
+        let isRunning = true;
+        
         const autoUpdateToggle = document.getElementById('autoUpdateToggle');
         autoUpdateToggle.addEventListener('change', (e) => {
             autoUpdateEnabled = e.target.checked;
@@ -392,7 +395,10 @@
         async function fetchAngles(){
             if (!autoUpdateEnabled) return; // skip if auto-update is disabled
             try{
-                const r = await fetch('/angles');
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 200);
+                const r = await fetch('/angles', { signal: controller.signal });
+                clearTimeout(timeoutId);
                 if (!r.ok) return;
                 const j = await r.json();
                 
@@ -413,11 +419,23 @@
                 // Apply angles (assume array length >=6)
                 const a = j.angles.slice(0,6).map(x => Number(x));
                 window.robotAPI.setJointAngles(a);
-            }catch(e){ /* ignore errors */ }
+            }catch(e){ 
+                console.error('Fetch error:', e);
+            }
         }
-        // start polling but don't force it if the endpoint doesn't exist
-        fetchAngles();
-        setInterval(fetchAngles, 100);
+        
+        // Synchronous polling loop: wait for response before next request
+        async function pollAngles() {
+            while(isRunning) {
+                const start = Date.now();
+                await fetchAngles();
+                const elapsed = Date.now() - start;
+                // Wait for remaining interval time, or briefly if request took longer
+                const waitTime = Math.max(0, fetchInterval - elapsed);
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+            }
+        }
+        pollAngles();
 
         // Render loop
         renderer.setAnimationLoop(() => {

@@ -15,6 +15,16 @@ void kinematics_init() {
     // DH parameters are statically initialized, nothing to do here
 }
 
+// Helper: create identity matrix
+/*
+void matrix_identity(Matrix4x4& mat) {
+    for (int row = 0; row < 4; row++) {
+        for (int col = 0; col < 4; col++) {
+            mat.m[row][col] = (row == col) ? 1.0 : 0.0;
+        }
+    }
+}*/
+
 // Helper: multiply two 4x4 matrices (row-major)
 static void matrix_multiply(const Matrix4x4& A, const Matrix4x4& B, Matrix4x4& result) {
     float temp[4][4];
@@ -29,18 +39,10 @@ static void matrix_multiply(const Matrix4x4& A, const Matrix4x4& B, Matrix4x4& r
     memcpy(result.m, temp, sizeof(temp));
 }
 
-// Helper: create identity matrix
-static void matrix_identity(Matrix4x4& mat) {
-    for (int row = 0; row < 4; row++) {
-        for (int col = 0; col < 4; col++) {
-            mat.m[row][col] = (row == col) ? 1.0 : 0.0;
-        }
-    }
-}
 
 // Helper: compute DH transformation matrix
 // Standard DH: T = Rz(theta) * Tz(d) * Tx(a) * Rx(alpha)
-static Matrix4x4 dh_transform(float a, float alpha_rad, float d, float theta_rad) {
+Matrix4x4 dh_transform(float a, float alpha_rad, float d, float theta_rad) {
     Matrix4x4 T;
     
     float ct = cos(theta_rad);
@@ -61,7 +63,8 @@ Matrix4x4 compute_forward_kinematics(const float joint_angles[6]) {
     Matrix4x4 result, temp;
     
     // Start with identity matrix
-    matrix_identity(result);
+    //matrix_identity(result);
+    result = IDENTITY_MATRIX;
     
     // Multiply DH transformations for each joint
     for (int i = 0; i < 6; i++) {

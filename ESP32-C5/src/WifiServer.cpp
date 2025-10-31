@@ -72,7 +72,6 @@ void handleAngles() {
     json += ",";
     json += "\"angles\": [";
     for (int i = 0; i < 6; ++i) {
-        // angles_deg may be volatile floats
         json += String(angles_deg[i], 2);
         if (i < 5) json += ",";
     }
@@ -83,23 +82,17 @@ void handleAngles() {
 
 // HTTP handler for /fk - returns JSON with 4x4 transformation matrix from base to end-effector
 void handleForwardKinematics() {
-    // Copy volatile angles to local array
-    float joint_angles[6];
-    for (int i = 0; i < 6; ++i) {
-        joint_angles[i] = angles_deg[i];
-    }
+    //float joint_angles[6];
+    //for (int i = 0; i < 6; ++i) {
+    //   joint_angles[i] = angles_deg[i];
+    //}
     
     // Compute forward kinematics
-    Matrix4x4 T;
-    // Initialize to identity matrix
-    for (int row = 0; row < 4; ++row) {
-        for (int col = 0; col < 4; ++col) {
-            T.m[row][col] = (row == col) ? 1.0f : 0.0f;
-        }
-    }
+    Matrix4x4 T = IDENTITY_MATRIX;
+    //matrix_identity(T);
 
     if (mcp3008_present) {
-        T = compute_forward_kinematics(joint_angles);
+        T = compute_forward_kinematics(angles_deg);
     }
 
     // Build JSON response with 4x4 matrix structure
@@ -124,6 +117,57 @@ void handleForwardKinematics() {
     json += "}";
     
     server.send(200, "application/json", json);
+}
+
+void handleAllData() {
+    // Compute forward kinematics
+    Matrix4x4 T = IDENTITY_MATRIX;
+    //matrix_identity(T);
+
+    if (mcp3008_present) {
+        T = compute_forward_kinematics(angles_deg);
+    }
+
+    // Build JSON response with 4x4 matrix structure
+    String json = "{";
+    json += "\"valid\": ";
+    json += mcp3008_present ? "true" : "false";
+    json += ",";
+    json += "\"dragButtonPressed\": ";
+    json += dragButtonPressed ? "true" : "false";
+    json += ",";
+    json += "\"rawAdcValues\": [";
+    for (int i = 0; i < 8; ++i) {
+        json += String(raw_adc[i]);
+        if (i < 7) json += ",";
+    }
+    json += "],";
+    json += "\"filteredAdcValues\": [";
+    for (int i = 0; i < 8; ++i) {
+        json += String(filtered_adc[i]);
+        if (i < 7) json += ",";
+    }
+    json += "],";
+    json += "\"jointAngles\": [";
+    for (int i = 0; i < 6; ++i) {
+        json += String(angles_deg[i], 2);
+        if (i < 5) json += ",";
+    }
+    json += "],";
+    json += "\"matrix\": [";
+    for (int row = 0; row < 4; ++row) {
+        json += "[";
+        for (int col = 0; col < 4; ++col) {
+            json += String(T.m[row][col], 6);  // 6 decimal places
+            if (col < 3) json += ",";
+        }
+        json += "]";
+        if (row < 3) json += ",";
+    }
+    json += "]";
+    json += "}";
+    
+    server.send(200, "application/json", json);    
 }
 
 void handleRoot() {
@@ -162,8 +206,43 @@ void handleRoot() {
     }
 }
 
-// forward declaration so wifi_setup can register the handler
-void handleRobotView();
+// HTTP handler to serve the robotView.html file from LittleFS
+void handleRobotView() {
+    static String cachedRobotViewHtml = "";
+    static bool robotViewLoaded = false;
+
+    if (!robotViewLoaded) {
+        if (LittleFS.exists("/robotView.html")) {
+            File f = LittleFS.open("/robotView.html", "r");
+            if (f) {
+                cachedRobotViewHtml = "";
+                unsigned long t0 = millis();
+                size_t bytes = 0;
+                while (f.available()) {
+                    char c = (char)f.read();
+                    cachedRobotViewHtml += c;
+                    bytes++;
+                }
+                unsigned long t1 = millis();
+                f.close();
+                unsigned long elapsed = t1 - t0;
+                Serial.printf("LittleFS: read /robotView.html %u bytes in %lu ms (cached)\n", (unsigned int)bytes, elapsed);
+                robotViewLoaded = true;
+            } else {
+                Serial.println("Failed to open LittleFS /robotView.html!");
+            }
+        } else {
+            Serial.println("LittleFS /robotView.html not found!");
+        }
+    }
+
+    if (robotViewLoaded) {
+        server.send(200, "text/html", cachedRobotViewHtml);
+    } else {
+        server.send(404, "text/plain", "robotView.html not found on LittleFS");
+    }
+}
+
 
 void wifi_setup() {
     WiFi.mode(WIFI_STA);
@@ -203,6 +282,7 @@ void wifi_setup() {
     server.on("/robotView.html", handleRobotView);
     server.on("/angles", handleAngles);
     server.on("/fk", handleForwardKinematics);
+    server.on("/allData", handleAllData);
     server.begin();
     Serial.printf("HTTP server started on port 80\n");
 }
@@ -252,40 +332,4 @@ void wifi_loop() {
     }
 }
 
-// HTTP handler to serve the robotView.html file from LittleFS
-void handleRobotView() {
-    static String cachedRobotViewHtml = "";
-    static bool robotViewLoaded = false;
-
-    if (!robotViewLoaded) {
-        if (LittleFS.exists("/robotView.html")) {
-            File f = LittleFS.open("/robotView.html", "r");
-            if (f) {
-                cachedRobotViewHtml = "";
-                unsigned long t0 = millis();
-                size_t bytes = 0;
-                while (f.available()) {
-                    char c = (char)f.read();
-                    cachedRobotViewHtml += c;
-                    bytes++;
-                }
-                unsigned long t1 = millis();
-                f.close();
-                unsigned long elapsed = t1 - t0;
-                Serial.printf("LittleFS: read /robotView.html %u bytes in %lu ms (cached)\n", (unsigned int)bytes, elapsed);
-                robotViewLoaded = true;
-            } else {
-                Serial.println("Failed to open LittleFS /robotView.html!");
-            }
-        } else {
-            Serial.println("LittleFS /robotView.html not found!");
-        }
-    }
-
-    if (robotViewLoaded) {
-        server.send(200, "text/html", cachedRobotViewHtml);
-    } else {
-        server.send(404, "text/plain", "robotView.html not found on LittleFS");
-    }
-}
 

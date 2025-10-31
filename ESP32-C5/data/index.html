@@ -14,86 +14,71 @@
         <h2>Links on this device</h2>
         <p><a href="/index.html">/index.html</a> This page. Also accessible from <a href="/">/</a></p>
         <p><a href="/robotView.html">/robotView.html</a> Open Robot View (3D)</p>
+        <p><a href="/allData">/allData</a> JSON structure with all available data</p>
         <p><a href="/angles">/angles</a> JSON structure with joint angles in degrees</p>
         <p><a href="/rawAdcValues">/rawAdcValues</a> JSON structure with raw ADC values</p>
         <p><a href="/fk">/fk</a> JSON structure with end-effector to robot coordinate transformation matrix</p>
         <h2>Joint angles (degrees)</h2>
-        <div id="angles">Loading...</div>
+        <div id="angles_deg">Loading...</div>
         <h2>Analog inputs (raw)</h2>
-        <div id="adc">Loading...</div>
+        <div id="adc_raw">Loading...</div>
         <h2>Analog inputs (filtered)</h2>
         <div id="adc_filtered">Loading...</div>
 
         <script>
-           async function fetchAngles(){
-                try{
-                    const r = await fetch('/angles');
+            let fetchInterval = 50; // desired interval in ms
+            let isRunning = true;
+
+            async function fetchAllData(){
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 200);
+                    const r = await fetch('/allData', { signal: controller.signal });
+                    clearTimeout(timeoutId);
                     if(!r.ok) return;
                     const j = await r.json();
-                    const el = document.getElementById('angles');
-                    
+
+                    // joint angles
+                    const elAngles = document.getElementById('angles_deg');
+                    const elAdcRaw = document.getElementById('adc_raw');
+                    const elAdcFiltered = document.getElementById('adc_filtered');
                     if (j.valid === false) {
-                        el.innerHTML = '<p style="color:#d00;font-weight:bold;">⚠️ MCP3008 not detected - Joint angles unavailable</p>';
-                        return;
-                    }
-                    
-                    const a = Array.isArray(j.angles) ? j.angles : [];
-                    if(a.length >= 6){
-                        el.innerHTML = `<ul>
-                            <li>J1: ${Number(a[0]).toFixed(2)}&deg;</li>
-                            <li>J2: ${Number(a[1]).toFixed(2)}&deg;</li>
-                            <li>J3: ${Number(a[2]).toFixed(2)}&deg;</li>
-                            <li>J4: ${Number(a[3]).toFixed(2)}&deg;</li>
-                            <li>J5: ${Number(a[4]).toFixed(2)}&deg;</li>
-                            <li>J6: ${Number(a[5]).toFixed(2)}&deg;</li>
-                        </ul>`;
+                        elAngles.innerHTML = '<p style="color:#d00;font-weight:bold;">⚠️ MCP3008 not detected - Joint angles unavailable</p>';
+                        elAdcRaw.innerHTML = '<p style="color:#d00;font-weight:bold;">⚠️ MCP3008 not detected - Raw ADC data unavailable</p>';
+                        elAdcFiltered.innerHTML = '<p style="color:#d00;font-weight:bold;">⚠️ MCP3008 not detected - Filtered ADC data unavailable</p>';
                     } else {
-                        el.textContent = 'Angles unavailable';
-                    }
-                }catch(e){ /* ignore transient errors */ }
-            }
-            fetchAngles();
-            setInterval(fetchAngles, 100);
+                        let htmlAngles = '<ul>';
+                        for(let i=0;i<6;i++) htmlAngles += `<li>J${i+1}: ${j.jointAngles[i]}</li>`;
+                        htmlAngles += '</ul>';
+                        elAngles.innerHTML = htmlAngles;
 
-            async function fetchValuesRaw(){
-                try{
-                    const r = await fetch('/rawAdcValues');
-                    const j = await r.json();
-                    const el = document.getElementById('adc');
-                    
-                    if (j.valid === false) {
-                        el.innerHTML = '<p style="color:#d00;font-weight:bold;">⚠️ MCP3008 not detected - ADC data unavailable</p>';
-                        return;
-                    }
-                    
-                    let html = '<ul>';
-                    for(let i=0;i<8;i++) html += `<li>CH${i}: ${j.values[i]}</li>`;
-                    html += '</ul>';
-                    el.innerHTML = html;
-                }catch(e){ console.error(e); }
-            }
-            fetchValuesRaw();
-            setInterval(fetchValuesRaw,100);
+                        let htmlRaw = '<ul>';
+                        for(let i=0;i<8;i++) htmlRaw += `<li>CH${i}: ${j.rawAdcValues[i]}</li>`;
+                        htmlRaw += '</ul>';
+                        elAdcRaw.innerHTML = htmlRaw;
 
-             async function fetchValuesFiltered(){
-                try{
-                    const r = await fetch('/filteredAdcValues');
-                    const j = await r.json();
-                    const el = document.getElementById('adc_filtered');
-                    
-                    if (j.valid === false) {
-                        el.innerHTML = '<p style="color:#d00;font-weight:bold;">⚠️ MCP3008 not detected - ADC data unavailable</p>';
-                        return;
+                        let htmlFiltered = '<ul>';
+                        for(let i=0;i<8;i++) htmlFiltered += `<li>CH${i}: ${j.filteredAdcValues[i]}</li>`;
+                        htmlFiltered += '</ul>';
+                        elAdcFiltered.innerHTML = htmlFiltered;
                     }
-                    
-                    let html = '<ul>';
-                    for(let i=0;i<8;i++) html += `<li>CH${i}: ${j.values[i]}</li>`;
-                    html += '</ul>';
-                    el.innerHTML = html;
-                }catch(e){ console.error(e); }
+                } catch(e) {
+                    console.error('Fetch error:', e);
+                }
             }
-            fetchValuesFiltered();
-            setInterval(fetchValuesFiltered,100);
+
+            // Synchronous polling loop: wait for response before next request
+            async function pollData() {
+                while(isRunning) {
+                    const start = Date.now();
+                    await fetchAllData();
+                    const elapsed = Date.now() - start;
+                    // Wait for remaining interval time, or briefly if request took longer
+                    const waitTime = Math.max(0, fetchInterval - elapsed);
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                }
+            }
+            pollData();
         </script>
     </body>
 </html>

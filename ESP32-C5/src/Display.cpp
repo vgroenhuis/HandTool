@@ -10,6 +10,14 @@ U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, /*SCL=*/3, /*SDA
 
 bool displayConnected = false;
 
+void display_off() {
+    if (!displayConnected) {
+        return;
+    }
+    u8g2.clearBuffer();
+    u8g2.sendBuffer();
+}
+
 bool display_is_connected() {
     // SH1106 typically has address 0x3C or 0x3D
     Wire.begin(2, 3); // SDA=GPIO2, SCL=GPIO3 (matching the u8g2 initialization)
