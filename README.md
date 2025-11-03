@@ -1,12 +1,15 @@
 # HandTool
 Handheld 6 DOF input device for robot control applications.
 
-![HandTool main view](pics/HandTool_500px.jpg)
+![HandTool main view](pics/HandTool_500px.png)
 
-[Large size photo](pics/HandTool_Main.jpg?raw=true)
+[Large size photo](pics/HandTool_main.jpg?raw=true)
 
-## System diagram
+# Electronics
 
+![HandTool main view](pics/HandTool_electronics_500px.png)
+
+[Large size photo](pics/HandTool_electronics.jpg?raw=true)
 
 ## Bill of Materials
 
