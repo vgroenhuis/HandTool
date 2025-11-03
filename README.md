@@ -5,11 +5,34 @@ Handheld 6 DOF input device for robot control applications.
 
 [Large size photo](pics/HandTool_Main.jpg?raw=true)
 
+# Introduction
+
+HandTool is a 6 DOF input device intended for manipulating robot arms and other applications involving manipulation of rigid bodies. It is low-cost and fully open source.
+
+The tool has six potentiometers connected together with 3D printed parts and brass shafts. The tool is balanced by two masses so that it mostly stays in position when released. It also has a pushbutton in the tip, intended to enable/disable dragging of some controlled object.
+
+The tool is WiFi enabled; the microcontroller serves webpages and provides several HTTP endpoints providing data in JSON format. The idea is that it could dynamically connect to other WiFi-enabled robot arms.
+
 # Electronics
 
 ![HandTool main view](pics/HandTool_electronics_500px.png)
 
 [Large size photo](pics/HandTool_electronics.jpg?raw=true)
+
+The microcontroller is an ESP32-C5-DevKitC-1. It is chosen for its 5 GHz WiFi capabilities, which is essential inside university buildings due to congestion in the 2.4 GHz band. A MCP3008 A/D unit measures the potentiometer values while a 1.3" OLED displays some status information.
+
+# User interfaces
+
+THe main user interface is accessed in a web browser at the device's address. The device connects to university's iotroam network, registered at iotroam.nl. A hostname can be coupled to its MAC address to give it a static hostname, such as handtool.roaming.utwente.nl . The IP address is also displayed on the screen, which is useful as it is dynamic and a change in IP address takes a few minutes to propagate through the DNS servers.
+
+The following HTTP endpoints are available:
+
+- /index.html Main page. Also accessible from /
+- /robotView.html Open Robot View (3D)
+- /allData JSON structure with all available data
+- /angles JSON structure with joint angles in degrees
+- /rawAdcValues JSON structure with raw ADC values
+- /fk JSON structure with end-effector to robot coordinate transformation matrix
 
 ## Bill of Materials
 
