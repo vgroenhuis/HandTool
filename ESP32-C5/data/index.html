@@ -13,14 +13,18 @@
         <ul>
             <li><a href="https://github.com/vgroenhuis/HandTool" target="_blank">github.com/vgroenhuis/HandTool</a> Github repository with CAD files, sources, manual and assembly instructions</li>
         </ul>
-        <h2>Links on this device</h2>
+        <h2>HTTP endpoints on this device:</h2>
         <ul>
-            <li><a href="/index.html">/index.html</a> This page. Also accessible from <a href="/">/</a></li>
+            <li><a href="/">/</a> This page.</li>
+            <li><a href="/index.html">/index.html</a> This page.</li>
             <li><a href="/robotView.html">/robotView.html</a> Open Robot View (3D)</li>
             <li><a href="/allData">/allData</a> JSON structure with all available data</li>
             <li><a href="/angles">/angles</a> JSON structure with joint angles in degrees</li>
             <li><a href="/rawAdcValues">/rawAdcValues</a> JSON structure with raw ADC values</li>
             <li><a href="/fk">/fk</a> JSON structure with end-effector to robot coordinate transformation matrix</li>
+            <li><a href="/serialAngles?enable=1">/serialAngles?enable=1</a> Enable serial output of joint angles</li>
+            <li><a href="/serialFK?enable=1">/serialFK?enable=1</a> Enable serial output of end-effector coordinate transformation data</li>
+            <li><a href="/serialFrequency?hz=10">/serialFrequency?hz=10</a> Set serial output frequency to 10 Hz</li>
         </ul>
         <h2>Serial Output</h2>
         <p>
