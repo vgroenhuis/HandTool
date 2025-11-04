@@ -74,7 +74,6 @@ Upcoming features
 
 - Implement HTTP authentication.
 - Improved design with more off-the-shelf parts instead of customized parts. Especially counterweights and links.
-- Use single data source for D-H parameters.
 - Dedicated PCB for electronics.
 - Calibrate zero position in software, saving offsets in filesystem.
 - Additional communication protocols.
