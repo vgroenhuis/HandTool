@@ -1,7 +1,7 @@
 # HandTool
 Handheld 6 DOF input device for robot control applications.
 
-![HandTool main view](pics/HandTool_500px.png)
+![HandTool main view](pics/HandTool_Main.jpg)
 
 [Large size photo](pics/HandTool_Main.jpg?raw=true)
 
@@ -15,7 +15,7 @@ The tool is WiFi enabled; the microcontroller serves webpages and provides sever
 
 # Electronics
 
-![HandTool main view](pics/HandTool_electronics_500px.png)
+![HandTool main view](pics/HandTool_electronics.jpg)
 
 [Large size photo](pics/HandTool_electronics.jpg?raw=true)
 
