@@ -17,6 +17,12 @@ WiFiClientSecure client; // TLS required by server
 HTTPClient heartbeatHttp;
 bool heartbeatInitialized = false;
 
+// Serial output control flags
+bool serialOutputAngles = false;
+bool serialOutputFK = false;
+unsigned long lastSerialOutput = 0;
+unsigned long serialOutputInterval = 100; // ms between outputs (default 10Hz)
+
 const char* wifi_mac() {
     static String m;
     m = WiFi.macAddress();
@@ -173,6 +179,43 @@ void handleAllData() {
     server.send(200, "application/json", json);    
 }
 
+// Handler to enable/disable serial output of joint angles
+void handleSerialAngles() {
+    if (server.hasArg("enable")) {
+        serialOutputAngles = (server.arg("enable") == "1" || server.arg("enable") == "true");
+        server.send(200, "text/plain", serialOutputAngles ? "Angles output enabled" : "Angles output disabled");
+    } else {
+        server.send(400, "text/plain", "Missing 'enable' parameter");
+    }
+}
+
+// Handler to enable/disable serial output of FK data
+void handleSerialFK() {
+    if (server.hasArg("enable")) {
+        serialOutputFK = (server.arg("enable") == "1" || server.arg("enable") == "true");
+        server.send(200, "text/plain", serialOutputFK ? "FK output enabled" : "FK output disabled");
+    } else {
+        server.send(400, "text/plain", "Missing 'enable' parameter");
+    }
+}
+
+// Handler to set serial output frequency
+void handleSerialFrequency() {
+    if (server.hasArg("hz")) {
+        float hz = server.arg("hz").toFloat();
+        if (hz > 0 && hz <= 1000) {
+            serialOutputInterval = (unsigned long)(1000.0 / hz);
+            String response = "Serial output frequency set to " + String(hz, 1) + " Hz (" + String(serialOutputInterval) + " ms)";
+            server.send(200, "text/plain", response);
+        } else {
+            server.send(400, "text/plain", "Frequency must be between 0.1 and 1000 Hz");
+        }
+    } else {
+        String response = "Current: " + String(1000.0 / serialOutputInterval, 1) + " Hz (" + String(serialOutputInterval) + " ms)";
+        server.send(200, "text/plain", response);
+    }
+}
+
 void handleRoot() {
     static String cachedIndexHtml = "";
     static bool isLoaded = false;
@@ -191,7 +234,7 @@ void handleRoot() {
                     bytes++;
                 }
                 f.close();
-                Serial.printf("LittleFS: read /index.html %u bytes (cached)\n");
+                //Serial.printf("LittleFS: read /index.html %u bytes (cached)\n");
                 isLoaded = true;
             } else {
                 Serial.println("Failed to open LittleFS /index.html!");
@@ -229,7 +272,7 @@ void handleRobotView() {
                 unsigned long t1 = millis();
                 f.close();
                 unsigned long elapsed = t1 - t0;
-                Serial.printf("LittleFS: read /robotView.html %u bytes in %lu ms (cached)\n", (unsigned int)bytes, elapsed);
+                //Serial.printf("LittleFS: read /robotView.html %u bytes in %lu ms (cached)\n", (unsigned int)bytes, elapsed);
                 robotViewLoaded = true;
             } else {
                 Serial.println("Failed to open LittleFS /robotView.html!");
@@ -271,9 +314,9 @@ bool sendHeartBeat() {
 void wifi_setup() {
     WiFi.mode(WIFI_STA);
 
-    Serial.printf("MAC address: %s\n", wifi_mac());
-    Serial.printf("Connecting to SSID: %s\n", SSID);
-    display_message("Connecting to " + String(SSID));
+    //Serial.printf("MAC address: %s\n", wifi_mac());
+    //Serial.printf("Connecting to SSID: %s\n", SSID);
+    display_message("MAC: " + String(wifi_mac()), "Connecting to " + String(SSID));
 
     WiFi.setSleep(false);
     WiFi.setBandMode(WIFI_BAND_MODE_5G_ONLY);
@@ -285,13 +328,13 @@ void wifi_setup() {
     unsigned long start = millis();
     const unsigned long timeout = 10000;
     while (!wifi_is_connected() && (millis() - start) < timeout) {
-        Serial.print('.');
+        //Serial.print('.');
         delay(500);
     }
     Serial.println();
 
     if (wifi_is_connected()) {
-        Serial.printf("Connected! IP address: %s\n", wifi_ip());
+        //Serial.printf("Connected! IP address: %s\n", wifi_ip());
         update_display();
     } else {
         Serial.println("Failed to connect within timeout.");
@@ -307,12 +350,15 @@ void wifi_setup() {
     server.on("/angles", handleAngles);
     server.on("/fk", handleForwardKinematics);
     server.on("/allData", handleAllData);
+    server.on("/serialAngles", handleSerialAngles);
+    server.on("/serialFK", handleSerialFK);
+    server.on("/serialFrequency", handleSerialFrequency);
     server.begin();
-    Serial.printf("HTTP server started on port 80\n");
+    //Serial.printf("HTTP server started on port 80\n");
 
     client.setInsecure();
     if (heartbeatHttp.begin(client, HEARTBEAT_URL)) {
-        Serial.println("heartbeatHttp begin() success");
+        //Serial.println("heartbeatHttp begin() success");
         heartbeatInitialized = true;
         heartbeatHttp.setReuse(true);
     } else {
@@ -330,6 +376,39 @@ void wifi_loop() {
             s_lastReconnect = millis();
             if (SSID && PASS) WiFi.begin(SSID, PASS);
             update_display();
+        }
+    }
+
+    // Serial output of joint angles and/or FK data
+    if ((serialOutputAngles || serialOutputFK) && mcp3008_present) {
+        unsigned long now = millis();
+        if (now - lastSerialOutput >= serialOutputInterval) {
+            lastSerialOutput = now;
+            
+            if (serialOutputAngles) {
+                Serial.print("$ANGLES: ");
+                Serial.print(millis());
+                Serial.print(", ");
+                for (int i = 0; i < 6; i++) {
+                    Serial.print(angles_deg[i], 3);
+                    if (i < 5) Serial.print(", ");
+                }
+                Serial.println();
+            }
+            
+            if (serialOutputFK) {
+                Matrix4x4 T = compute_forward_kinematics(angles_deg);
+                Serial.print("$FK: ");
+                Serial.print(millis());
+                Serial.print(", ");
+                for (int row = 0; row < 4; row++) {
+                    for (int col = 0; col < 4; col++) {
+                        Serial.print(T.m[row][col], 6);
+                        if (row < 3 || col < 3) Serial.print(", ");
+                    }
+                }
+                Serial.println();
+            }
         }
     }
 

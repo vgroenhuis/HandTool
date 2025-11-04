@@ -10,24 +10,118 @@
         <h1>HandTool Web Server</h1>
         <p><img src="https://raw.githubusercontent.com/vgroenhuis/HandTool/refs/heads/main/pics/HandTool_500px.jpg" alt="HandTool" style="max-width:100%;height:auto;"></p>
         <h2>External links</h2>
-        <p><a href="https://github.com/vgroenhuis/HandTool" target="_blank">github.com/vgroenhuis/HandTool</a> Github repository with CAD files, sources, manual and assembly instructions</p>
+        <ul>
+            <li><a href="https://github.com/vgroenhuis/HandTool" target="_blank">github.com/vgroenhuis/HandTool</a> Github repository with CAD files, sources, manual and assembly instructions</li>
+        </ul>
         <h2>Links on this device</h2>
-        <p><a href="/index.html">/index.html</a> This page. Also accessible from <a href="/">/</a></p>
-        <p><a href="/robotView.html">/robotView.html</a> Open Robot View (3D)</p>
-        <p><a href="/allData">/allData</a> JSON structure with all available data</p>
-        <p><a href="/angles">/angles</a> JSON structure with joint angles in degrees</p>
-        <p><a href="/rawAdcValues">/rawAdcValues</a> JSON structure with raw ADC values</p>
-        <p><a href="/fk">/fk</a> JSON structure with end-effector to robot coordinate transformation matrix</p>
-        <h2>Joint angles (degrees)</h2>
-        <div id="angles_deg">Loading...</div>
-        <h2>Analog inputs (raw)</h2>
-        <div id="adc_raw">Loading...</div>
-        <h2>Analog inputs (filtered)</h2>
-        <div id="adc_filtered">Loading...</div>
+        <ul>
+            <li><a href="/index.html">/index.html</a> This page. Also accessible from <a href="/">/</a></li>
+            <li><a href="/robotView.html">/robotView.html</a> Open Robot View (3D)</li>
+            <li><a href="/allData">/allData</a> JSON structure with all available data</li>
+            <li><a href="/angles">/angles</a> JSON structure with joint angles in degrees</li>
+            <li><a href="/rawAdcValues">/rawAdcValues</a> JSON structure with raw ADC values</li>
+            <li><a href="/fk">/fk</a> JSON structure with end-effector to robot coordinate transformation matrix</li>
+        </ul>
+        <h2>Serial Output</h2>
+        <p>
+            <label>
+                <input type="checkbox" id="serialAnglesToggle">
+                Output joint angles to serial port
+            </label>
+        </p>
+        <p>
+            <label>
+                <input type="checkbox" id="serialFKToggle">
+                Output FK transformation matrix to serial port
+            </label>
+        </p>
+        <p>
+            <label>
+                Frequency (Hz): 
+                <input type="number" id="serialFrequencyInput" min="0.1" max="1000" step="0.1" value="10" style="width:80px;">
+                <button id="setFrequencyBtn">Set</button>
+            </label>
+            <span id="frequencyStatus" style="margin-left:10px;color:#666;"></span>
+        </p>
+        <h2>Data Display</h2>
+        <p>
+            <label>
+                <input type="checkbox" id="autoUpdateToggle">
+                Auto-update data
+            </label>
+        </p>
+        <h3>Joint angles (degrees)</h3>
+        <div id="angles_deg">Enable auto-update data first</div>
+        <h3>Analog inputs (raw)</h3>
+        <div id="adc_raw">Enable auto-update data first</div>
+        <h3>Analog inputs (filtered)</h3>
+        <div id="adc_filtered">Enable auto-update data first</div>
 
         <script>
             let fetchInterval = 50; // desired interval in ms
             let isRunning = true;
+
+            // Toggle auto-update on checkbox change
+            document.addEventListener('DOMContentLoaded', function() {
+                const toggle = document.getElementById('autoUpdateToggle');
+                toggle.addEventListener('change', function() {
+                    isRunning = this.checked;
+                    if (isRunning) {
+                        pollData(); // Restart polling if it was stopped
+                    }
+                });
+
+                // Toggle serial output of joint angles
+                const serialAnglesToggle = document.getElementById('serialAnglesToggle');
+                serialAnglesToggle.addEventListener('change', function() {
+                    fetch('/serialAngles?enable=' + (this.checked ? '1' : '0'))
+                        .then(r => r.text())
+                        .then(msg => console.log(msg))
+                        .catch(e => console.error('Serial angles toggle error:', e));
+                });
+
+                // Toggle serial output of FK data
+                const serialFKToggle = document.getElementById('serialFKToggle');
+                serialFKToggle.addEventListener('change', function() {
+                    fetch('/serialFK?enable=' + (this.checked ? '1' : '0'))
+                        .then(r => r.text())
+                        .then(msg => console.log(msg))
+                        .catch(e => console.error('Serial FK toggle error:', e));
+                });
+
+                // Set serial output frequency
+                const setFrequencyBtn = document.getElementById('setFrequencyBtn');
+                const frequencyInput = document.getElementById('serialFrequencyInput');
+                const frequencyStatus = document.getElementById('frequencyStatus');
+                
+                setFrequencyBtn.addEventListener('click', function() {
+                    const hz = parseFloat(frequencyInput.value);
+                    if (hz > 0 && hz <= 1000) {
+                        fetch('/serialFrequency?hz=' + hz)
+                            .then(r => r.text())
+                            .then(msg => {
+                                console.log(msg);
+                                frequencyStatus.textContent = '✓ ' + msg;
+                                frequencyStatus.style.color = '#080';
+                                setTimeout(() => frequencyStatus.textContent = '', 3000);
+                            })
+                            .catch(e => {
+                                console.error('Frequency set error:', e);
+                                frequencyStatus.textContent = '✗ Error';
+                                frequencyStatus.style.color = '#d00';
+                            });
+                    } else {
+                        frequencyStatus.textContent = '✗ Invalid frequency';
+                        frequencyStatus.style.color = '#d00';
+                    }
+                });
+
+                // Load current frequency on page load
+                fetch('/serialFrequency')
+                    .then(r => r.text())
+                    .then(msg => console.log('Current serial output: ' + msg))
+                    .catch(e => console.error('Frequency query error:', e));
+            });
 
             async function fetchAllData(){
                 try {
@@ -78,7 +172,7 @@
                     await new Promise(resolve => setTimeout(resolve, waitTime));
                 }
             }
-            pollData();
+            //pollData();
         </script>
     </body>
 </html>

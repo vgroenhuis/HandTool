@@ -25,7 +25,7 @@ bool display_is_connected() {
     byte error = Wire.endTransmission();
     
     if (error == 0) {
-        Serial.println("Display found at address 0x3C");
+        //Serial.println("Display found at address 0x3C");
         return true;
     }
     
@@ -34,7 +34,7 @@ bool display_is_connected() {
     error = Wire.endTransmission();
     
     if (error == 0) {
-        Serial.println("Display found at address 0x3D");
+        //Serial.println("Display found at address 0x3D");
         return true;
     }
     
@@ -58,7 +58,7 @@ void display_setup() {
     u8g2.setFont(u8g2_font_5x7_tr);
     u8g2.drawStr(0,0,"HandTool Display");
     u8g2.sendBuffer();
-    Serial.printf("Display initialized\n");
+    //Serial.printf("Display initialized\n");
 }
 
 void update_display() {
@@ -105,12 +105,16 @@ void display_loop() {
     }
 }
 
-void display_message(String msg) {
+void display_message(String msg, String msg2) {
     if (!displayConnected) {
         return;
     }
     u8g2.clearBuffer();
     u8g2.setCursor(0, 10);
     u8g2.print(msg);
+    if (msg2 != "") {
+        u8g2.setCursor(0, 20);
+        u8g2.print(msg2);
+    }
     u8g2.sendBuffer();
 }

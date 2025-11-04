@@ -14,7 +14,7 @@ void init_file_system() {
     if (!LittleFS.begin(true, "/littlefs", 10, "littlefs")) {
         Serial.println("LittleFS Mount Failed");
     } else {
-        Serial.println("LittleFS Mounted Successfully");
+        //Serial.println("LittleFS Mounted Successfully");
     }
 }
 

@@ -70,7 +70,7 @@ void robot_setup() {
         bool ok = probe_mcp3008_presence();
         mcp3008_present = ok;
         if (ok) {
-            Serial.println("MCP3008 detected via SPI probe");
+            //Serial.println("MCP3008 detected via SPI probe");
         } else {
             Serial.println("WARNING: MCP3008 not detected (SPI reads look invalid)");
         }
