@@ -34,6 +34,12 @@ The following HTTP endpoints are available:
 - /rawAdcValues JSON structure with raw ADC values
 - /fk JSON structure with end-effector to robot coordinate transformation matrix
 
+## 3D robot view
+
+![3D robot view](pics/View3d_Screenshot.png)
+
+This screenshot shows a schematic rendering of the HandTool. If it is not connected, the sliders can be used to manipulate it.
+
 ## Bill of Materials
 
 1. 6x potmeter: WH148 compatible, 10KΩ. I used R16148-1A-2-B10K.
