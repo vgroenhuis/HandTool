@@ -71,6 +71,7 @@ The HandTool was first developed in 2024 to actuate a robot arm with identical k
 
 Upcoming features
 
+- Implement HTTP authentication.
 - Improved design with more off-the-shelf parts instead of customized parts. Especially counterweights and links.
 - Dedicated PCB for electronics.
 - Calibrate zero position in software, saving offsets in filesystem.
