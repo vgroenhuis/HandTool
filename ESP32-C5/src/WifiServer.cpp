@@ -344,12 +344,12 @@ void wifi_setup() {
     // Start web server regardless (will still serve local info even if not connected)
     server.on("/", handleRoot);
     server.on("/index.html", handleRoot);
+    server.on("/robotView.html", handleRobotView);
+    server.on("/allData", handleAllData);
+    server.on("/angles", handleAngles);
     server.on("/rawAdcValues", handleRawAdcValues);
     server.on("/filteredAdcValues", handleFilteredAdcValues);
-    server.on("/robotView.html", handleRobotView);
-    server.on("/angles", handleAngles);
     server.on("/fk", handleForwardKinematics);
-    server.on("/allData", handleAllData);
     server.on("/serialAngles", handleSerialAngles);
     server.on("/serialFK", handleSerialFK);
     server.on("/serialFrequency", handleSerialFrequency);
