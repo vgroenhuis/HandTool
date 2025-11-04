@@ -3,8 +3,6 @@ Handheld 6 DOF input device for robot control applications.
 
 ![HandTool main view](pics/HandTool_Main.jpg)
 
-[Large size photo](pics/HandTool_Main.jpg?raw=true)
-
 # Introduction
 
 HandTool is a 6 DOF input device intended for manipulating robot arms and other applications involving manipulation of rigid bodies. It is low-cost and fully open source.
@@ -16,8 +14,6 @@ The tool is WiFi enabled; the microcontroller serves webpages and provides sever
 # Electronics
 
 ![HandTool main view](pics/HandTool_electronics.jpg)
-
-[Large size photo](pics/HandTool_electronics.jpg?raw=true)
 
 The microcontroller is an ESP32-C5-DevKitC-1. It is chosen for its 5 GHz WiFi capabilities, which is essential inside university buildings due to congestion in the 2.4 GHz band. A MCP3008 A/D unit measures the potentiometer values while a 1.3" OLED displays some status information.
 
