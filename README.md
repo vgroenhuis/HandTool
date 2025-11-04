@@ -71,14 +71,12 @@ The HandTool was first developed in 2024 to actuate a robot arm with identical k
 
 Upcoming features
 
-- Button on stick to allow start/stop dragging for robot control
-- Dedicated PCB for electronics
-- Calibrate zero position in software, saving offsets in filesystem
-- Additional communication protocols
-  - Examples: Bluetooth, MQTT, ROS2, Serial, ...
+- Improved design with more off-the-shelf parts instead of customized parts. Especially counterweights and links.
+- Dedicated PCB for electronics.
+- Calibrate zero position in software, saving offsets in filesystem.
+- Additional communication protocols.
+  - Examples: Bluetooth, MQTT, ROS2, ...
   - Want to implement it yourself? Clone the repository, implement it and make a pull request!
- 
-
 
 ## Phyiscal devices
 
