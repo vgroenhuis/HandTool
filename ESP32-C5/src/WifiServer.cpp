@@ -216,6 +216,25 @@ void handleSerialFrequency() {
     }
 }
 
+// Handler to return D-H parameters as JSON
+void handleDHParams() {
+    String json = "{";
+    json += "\"dhParams\": [";
+    for (int i = 0; i < 6; i++) {
+        json += "{";
+        json += "\"joint\": " + String(i + 1) + ",";
+        json += "\"a\": " + String(dh_params[i].a, 6) + ",";
+        json += "\"alpha_deg\": " + String(dh_params[i].alpha_deg, 2) + ",";
+        json += "\"d\": " + String(dh_params[i].d, 6) + ",";
+        json += "\"theta_deg\": " + String(dh_params[i].theta_deg, 2);
+        json += "}";
+        if (i < 5) json += ",";
+    }
+    json += "]";
+    json += "}";
+    server.send(200, "application/json", json);
+}
+
 void handleRoot() {
     static String cachedIndexHtml = "";
     static bool isLoaded = false;
@@ -353,6 +372,7 @@ void wifi_setup() {
     server.on("/serialAngles", handleSerialAngles);
     server.on("/serialFK", handleSerialFK);
     server.on("/serialFrequency", handleSerialFrequency);
+    server.on("/dhParams", handleDHParams);
     server.begin();
     //Serial.printf("HTTP server started on port 80\n");
 

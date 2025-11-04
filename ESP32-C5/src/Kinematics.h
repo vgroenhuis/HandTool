@@ -23,6 +23,16 @@ const Matrix4x4 IDENTITY_MATRIX = {
     }
 };
 
+// DH parameters matching robotView.html
+const DHParams dh_params[6] = {
+    { 0.0,     -90.0, 0.0625,   0.0   },  // Joint 1
+    { 0.09375,   0.0, 0.0,     -90.0   },  // Joint 2
+    { 0.09375,   0.0, 0.0,      90.0   },  // Joint 3
+    { 0.0,     -90.0, -0.01533, -90.0  },  // Joint 4
+    { 0.0,      90.0, 0.01533,  90.0   },  // Joint 5
+    { 0.0,       0.0, -0.072, 90.0   }   // Joint 6
+};
+
 //void matrix_identity(Matrix4x4& mat);
 
 // Initialize kinematics with DH parameters

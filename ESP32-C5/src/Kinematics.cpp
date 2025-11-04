@@ -1,16 +1,6 @@
 #include "Kinematics.h"
 #include <math.h>
 
-// DH parameters matching robotView.html
-static DHParams dh_params[6] = {
-    { 0.0,     -90.0, 0.0625,   0.0   },  // Joint 1
-    { 0.09375,   0.0, 0.0,     -90.0   },  // Joint 2
-    { 0.09375,   0.0, 0.0,      90.0   },  // Joint 3
-    { 0.0,     -90.0, -0.01533, -90.0  },  // Joint 4
-    { 0.0,      90.0, 0.01533,  90.0   },  // Joint 5
-    { 0.0,       0.0, -0.04073, 90.0   }   // Joint 6
-};
-
 void kinematics_init() {
     // DH parameters are statically initialized, nothing to do here
 }
