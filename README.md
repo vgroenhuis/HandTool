@@ -1,9 +1,7 @@
 # HandTool
 Handheld 6 DOF input device for robot control applications.
 
-![HandTool main view](pics/HandTool_500px.png)
-
-[Large size photo](pics/HandTool_Main.jpg?raw=true)
+![HandTool main view](pics/HandTool_Main.jpg)
 
 # Introduction
 
@@ -15,24 +13,34 @@ The tool is WiFi enabled; the microcontroller serves webpages and provides sever
 
 # Electronics
 
-![HandTool main view](pics/HandTool_electronics_500px.png)
-
-[Large size photo](pics/HandTool_electronics.jpg?raw=true)
+![HandTool main view](pics/HandTool_electronics.jpg)
 
 The microcontroller is an ESP32-C5-DevKitC-1. It is chosen for its 5 GHz WiFi capabilities, which is essential inside university buildings due to congestion in the 2.4 GHz band. A MCP3008 A/D unit measures the potentiometer values while a 1.3" OLED displays some status information.
 
-# User interfaces
+# User interface
 
 THe main user interface is accessed in a web browser at the device's address. The device connects to university's iotroam network, registered at iotroam.nl. A hostname can be coupled to its MAC address to give it a static hostname, such as handtool.roaming.utwente.nl . The IP address is also displayed on the screen, which is useful as it is dynamic and a change in IP address takes a few minutes to propagate through the DNS servers.
 
+## 3D robot view
+
+![3D robot view](pics/View3d_Screenshot.png)
+
+This screenshot shows a schematic rendering of the HandTool. If it is not connected, the sliders can be used to manipulate it.
+
+## HTTP endpoints
+
 The following HTTP endpoints are available:
 
-- /index.html Main page. Also accessible from /
+- / Main page.
+- /index.html Main page, same as /
 - /robotView.html Open Robot View (3D)
 - /allData JSON structure with all available data
 - /angles JSON structure with joint angles in degrees
 - /rawAdcValues JSON structure with raw ADC values
 - /fk JSON structure with end-effector to robot coordinate transformation matrix
+- /serialAngles Enable/disable outputting angles to serial port
+- /serialFK Enable/disable outputting end-effector coordinate frame to serial port
+- /serialFrequency Control frequency of serial data
 
 ## Bill of Materials
 
@@ -63,14 +71,12 @@ The HandTool was first developed in 2024 to actuate a robot arm with identical k
 
 Upcoming features
 
-- Button on stick to allow start/stop dragging for robot control
-- Dedicated PCB for electronics
-- Calibrate zero position in software, saving offsets in filesystem
-- Additional communication protocols
-  - Examples: Bluetooth, MQTT, ROS2, Serial, ...
+- Improved design with more off-the-shelf parts instead of customized parts. Especially counterweights and links.
+- Dedicated PCB for electronics.
+- Calibrate zero position in software, saving offsets in filesystem.
+- Additional communication protocols.
+  - Examples: Bluetooth, MQTT, ROS2, ...
   - Want to implement it yourself? Clone the repository, implement it and make a pull request!
- 
-
 
 ## Phyiscal devices
 
