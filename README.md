@@ -38,6 +38,7 @@ The following HTTP endpoints are available:
 - /angles JSON structure with joint angles in degrees
 - /rawAdcValues JSON structure with raw ADC values
 - /fk JSON structure with end-effector to robot coordinate transformation matrix
+- /dhParams JSON structure with D-H parameters of the HandTool
 - /serialAngles Enable/disable outputting angles to serial port
 - /serialFK Enable/disable outputting end-effector coordinate frame to serial port
 - /serialFrequency Control frequency of serial data
@@ -73,6 +74,7 @@ Upcoming features
 
 - Implement HTTP authentication.
 - Improved design with more off-the-shelf parts instead of customized parts. Especially counterweights and links.
+- Use single data source for D-H parameters.
 - Dedicated PCB for electronics.
 - Calibrate zero position in software, saving offsets in filesystem.
 - Additional communication protocols.
