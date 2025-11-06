@@ -8,6 +8,11 @@
 
 void sleep_setup() {
     esp_sleep_enable_ext1_wakeup_io(1<<4, ESP_EXT1_WAKEUP_ANY_LOW);
+    esp_sleep_enable_timer_wakeup(30 * 60 * 1000000); // 30 minutes
+}
+
+bool isPowerSwitchOn() {
+    return digitalRead(4) == LOW;
 }
 
 void init_file_system() {
@@ -19,15 +24,18 @@ void init_file_system() {
 }
 
 void setupHandTool() {
+    rgbLedWrite(LED_BUILTIN, 255, 255, 255);
     Serial.begin(115200);
     delay(100);
-    rgbLedWrite(LED_BUILTIN, 30, 10, 0); // Orange during setup
     sleep_setup();
     init_file_system();
     display_setup();
     robot_setup();
     kinematics_init();
-    wifi_setup();
+    if (isPowerSwitchOn()) {
+        rgbLedWrite(LED_BUILTIN, 30, 10, 0); // Orange during setup
+        wifi_setup();
+    }
     rgbLedWrite(LED_BUILTIN, 0, 10, 0); // Green when setup complete
 }
 
@@ -36,7 +44,6 @@ void setupHandTool() {
 void setup() {
     setupHandTool();
 }
-
 
 void printValuesPeriodically() {
     static unsigned long lastPrinted = 0;
@@ -52,6 +59,7 @@ void printValuesPeriodically() {
 }
 
 void startDeepSleep() {
+    delay(10);
     rgbLedWrite(LED_BUILTIN, 0, 0, 0);
     display_off();
     delay(10);
@@ -59,7 +67,7 @@ void startDeepSleep() {
 }
 
 void testDeepSleep() {
-    if (digitalRead(4) == HIGH) {
+    if (!isPowerSwitchOn()) {
         startDeepSleep();
     }
 
@@ -73,10 +81,10 @@ void testDeepSleep() {
 }
 
 void loopHandTool() {
+    testDeepSleep();
     sensors_loop();
     display_loop();
     wifi_loop();
-    testDeepSleep();
     //printValuesPeriodically();
     //delay(1);
 }
