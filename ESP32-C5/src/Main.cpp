@@ -8,7 +8,8 @@
 
 void sleep_setup() {
     esp_sleep_enable_ext1_wakeup_io(1<<4, ESP_EXT1_WAKEUP_ANY_LOW);
-    esp_sleep_enable_timer_wakeup(30 * 60 * 1000000); // 30 minutes
+    esp_sleep_enable_timer_wakeup(10 /*minutes*/ * 60 * 1000000);
+    //esp_sleep_enable_timer_wakeup(5 /*seconds*/ * 1000000);
 }
 
 bool isPowerSwitchOn() {
@@ -24,7 +25,8 @@ void init_file_system() {
 }
 
 void setupHandTool() {
-    rgbLedWrite(LED_BUILTIN, 255, 255, 255);
+    //rgbLedWrite(LED_BUILTIN, 255, 255, 255);
+    rgbLedWrite(LED_BUILTIN, 255, 0, 0);
     Serial.begin(115200);
     delay(100);
     sleep_setup();
@@ -60,6 +62,9 @@ void printValuesPeriodically() {
 
 void startDeepSleep() {
     delay(10);
+    display_message("Going to sleep...");
+    rgbLedWrite(LED_BUILTIN, 255, 255, 255);
+    delay(5000); // wait five seconds
     rgbLedWrite(LED_BUILTIN, 0, 0, 0);
     display_off();
     delay(10);
@@ -70,14 +75,6 @@ void testDeepSleep() {
     if (!isPowerSwitchOn()) {
         startDeepSleep();
     }
-
-/*
-    static unsigned long lastPrint = 0;
-    if (millis() - lastPrint >= 1000) {
-        lastPrint = millis();
-        Serial.println("Awake!");
-    }
-*/
 }
 
 void loopHandTool() {
