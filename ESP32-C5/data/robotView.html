@@ -65,6 +65,7 @@
                 </div>
                 <a class="btn" href="javascript:void(0)" id="resetViewBtn">Reset View</a>
                 <a class="btn" href="javascript:void(0)" id="resetJointsBtn">Zero Joints</a>
+                <a class="btn" href="javascript:void(0)" id="dragBtn" style="background: #1a3a2a;">Drag EE</a>
             </div>
         </div>
         <div id="matrix" style="white-space: pre;">T_EE (4×4):</div>
@@ -129,13 +130,23 @@
     // DH parameters (default placeholders). Units: meters, degrees.
     // Replace later via robotAPI.setDH([...]).
 
+    /*
     let dh = [
         { a: 0      , alphaDeg: -90, d: 0.0625, thetaDeg: 0 },
         { a: 0.09375, alphaDeg: 0, d: 0     , thetaDeg: -90 },
         { a: 0.09375, alphaDeg: 0, d: 0     , thetaDeg: 90 },
         { a: 0      , alphaDeg: -90, d: -0.01533, thetaDeg: -90 },
         { a: 0      , alphaDeg: 90, d: 0.01533   , thetaDeg: 90 },
-        { a: 0      , alphaDeg: 0, d: -0.04073   , thetaDeg: 90 },
+        { a: 0      , alphaDeg: 0, d: -0.072   , thetaDeg: 90 },
+    ];
+    */
+    let dh = [
+        { a: 0      , alphaDeg: -90, d: 0, thetaDeg: 0 },
+        { a: 0.09375, alphaDeg: 0, d: 0     , thetaDeg: -90 },
+        { a: 0.09375, alphaDeg: 0, d: 0     , thetaDeg: 90 },
+        { a: 0      , alphaDeg: -90, d: -0.01533, thetaDeg: -90 },
+        { a: 0      , alphaDeg: 90, d: 0.01533   , thetaDeg: 90 },
+        { a: 0      , alphaDeg: 0, d: -0.072   , thetaDeg: 90 },
     ];
     let qDeg = [0, 0, 0, 0, 0, 0]; // six joint angles (degrees)
 
@@ -150,6 +161,10 @@
     // Joint spheres: 20 mm diameter => radius = 0.01 m
     const sphereGeo = new THREE.SphereGeometry(0.01, 20, 16);
     const jointMat = new THREE.MeshStandardMaterial({ color: 0x7cc7ff, metalness: 0.2, roughness: 0.4 });
+    
+    // End-effector material (can change color for drag mode)
+    const eeMat = new THREE.MeshStandardMaterial({ color: 0x7cc7ff, metalness: 0.2, roughness: 0.4 });
+    const eeDragMat = new THREE.MeshStandardMaterial({ color: 0xff6b35, metalness: 0.3, roughness: 0.3, emissive: 0xff3300, emissiveIntensity: 0.3 });
 
     // Link cylinders: 7 mm diameter => radius = 0.0035 m
     const cylGeo = new THREE.CylinderGeometry(0.0035, 0.0035, 1, 18, 1, false);
@@ -158,7 +173,8 @@
 
         // Build visuals
         for (let i = 0; i < 7; i++) {
-            const s = new THREE.Mesh(sphereGeo, jointMat);
+            const mat = (i === 6) ? eeMat : jointMat; // Use special material for end-effector
+            const s = new THREE.Mesh(sphereGeo, mat);
             robot.add(s);
             jointSpheres.push(s);
 
@@ -305,6 +321,28 @@
             updateRobot();
         };
 
+        // Drag mode state, visuals, and button handler
+        let dragButtonPressed = false;
+        const dragBtn = document.getElementById('dragBtn');
+        function applyDragVisuals() {
+            if (!jointSpheres[6]) return;
+            if (dragButtonPressed) {
+                dragBtn.style.background = '#ff6b35';
+                dragBtn.style.border = '1px solid #ff8c5f';
+                dragBtn.textContent = 'Dragging...';
+                jointSpheres[6].material = eeDragMat;
+            } else {
+                dragBtn.style.background = '#1a3a2a';
+                dragBtn.style.border = '1px solid #3d4c79';
+                dragBtn.textContent = 'Drag EE';
+                jointSpheres[6].material = eeMat;
+            }
+        }
+        dragBtn.onclick = () => {
+            dragButtonPressed = !dragButtonPressed;
+            applyDragVisuals();
+        };
+
         // Public API for external control
         // Usage:
         //   robotAPI.setDH([{a, d, alphaDeg, thetaDeg}, ... 6 items ...]);
@@ -354,28 +392,97 @@
             frameAxes.forEach(ax => ax.visible = visible);
         });
 
-        // Optional: poll /angles endpoint every 1s and update joint sliders if present
+        // Optional: poll /angles endpoint and update joint sliders if present
         let autoUpdateEnabled = true;
+        let fetchInterval = 50; // desired interval in ms
+        let isRunning = true;
+        
         const autoUpdateToggle = document.getElementById('autoUpdateToggle');
         autoUpdateToggle.addEventListener('change', (e) => {
             autoUpdateEnabled = e.target.checked;
         });
 
+        // Fetch D-H parameters from controller
+        async function fetchDHParams() {
+            try {
+                const r = await fetch('/dhParams');
+                if (!r.ok) {
+                    console.warn('Failed to fetch D-H parameters from controller, using defaults');
+                    return false;
+                }
+                const j = await r.json();
+                if (!j.dhParams || !Array.isArray(j.dhParams) || j.dhParams.length !== 6) {
+                    console.warn('Invalid D-H parameters response, using defaults');
+                    return false;
+                }
+                
+                // Update dh array with values from controller
+                for (let i = 0; i < 6; i++) {
+                    const p = j.dhParams[i];
+                    dh[i].a = p.a;
+                    dh[i].alphaDeg = p.alpha_deg;
+                    dh[i].d = p.d;
+                    dh[i].thetaDeg = p.theta_deg;
+                }
+                
+                console.log('D-H parameters loaded from controller:', dh);
+                // Rebuild robot with new D-H parameters
+                //window.robotAPI.rebuildDH(dh);
+                updateRobot();
+                return true;
+            } catch(e) {
+                console.error('Error fetching D-H parameters:', e);
+                return false;
+            }
+        }
+
+        // Load D-H parameters on startup
+        fetchDHParams();
+
         async function fetchAngles(){
             if (!autoUpdateEnabled) return; // skip if auto-update is disabled
             try{
-                const r = await fetch('/angles');
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 200);
+                const r = await fetch('/angles', { signal: controller.signal });
+                clearTimeout(timeoutId);
                 if (!r.ok) return;
                 const j = await r.json();
+                
+                if (j.valid === false) {
+                    // Don't update sliders when data is invalid
+                    return;
+                }
+                
+                // Sync drag mode from device
+                if (typeof j.dragButtonPressed === 'boolean') {
+                    if (dragButtonPressed !== j.dragButtonPressed) {
+                        dragButtonPressed = j.dragButtonPressed;
+                        applyDragVisuals();
+                    }
+                }
+                
                 if (!j.angles || !Array.isArray(j.angles)) return;
                 // Apply angles (assume array length >=6)
                 const a = j.angles.slice(0,6).map(x => Number(x));
                 window.robotAPI.setJointAngles(a);
-            }catch(e){ /* ignore errors */ }
+            } catch(e) { 
+                console.error('Fetch error:', e);
+            }
         }
-        // start polling but don't force it if the endpoint doesn't exist
-        fetchAngles();
-        setInterval(fetchAngles, 50);
+        
+        // Synchronous polling loop: wait for response before next request
+        async function pollAngles() {
+            while(isRunning) {
+                const start = Date.now();
+                await fetchAngles();
+                const elapsed = Date.now() - start;
+                // Wait for remaining interval time, or briefly if request took longer
+                const waitTime = Math.max(0, fetchInterval - elapsed);
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+            }
+        }
+        pollAngles();
 
         // Render loop
         renderer.setAnimationLoop(() => {

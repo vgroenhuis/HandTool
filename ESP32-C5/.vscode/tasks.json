@@ -1,0 +1,17 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Build ESP32-C5 HandTool",
+			"type": "shell",
+			"command": "C:\\Users\\GroenhuisV\\.platformio\\penv\\Scripts\\platformio.exe run",
+			"group": "build"
+		},
+		{
+			"label": "Build ESP32-C5 HandTool (no TLS)",
+			"type": "shell",
+			"command": "C:\\Users\\GroenhuisV\\.platformio\\penv\\Scripts\\platformio.exe run",
+			"group": "build"
+		}
+	]
+}
