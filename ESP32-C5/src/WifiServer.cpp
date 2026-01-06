@@ -1,21 +1,25 @@
 #include "WifiServer.h"
-#include <WiFi.h>
-#include <WebServer.h>
+// #include <WiFi.h>
+// #include <WebServer.h>
 #include <Arduino.h>
-#include <HTTPClient.h>
-#include <WiFiClientSecure.h>
+// #include <HTTPClient.h>
+// #include <WiFiClientSecure.h>
 #include "Adc.h"
 #include <LittleFS.h>
 #include "Display.h"
 #include "Kinematics.h"
 
+/*
 static unsigned long s_lastReconnect = 0;
 static unsigned long s_lastStatusPing = 0;
+*/
 
+/*
 WebServer server(80);
 WiFiClientSecure client; // TLS required by server
 HTTPClient heartbeatHttp;
 bool heartbeatInitialized = false;
+*/
 
 // Serial output control flags
 bool serialOutputAngles = false;
@@ -23,6 +27,7 @@ bool serialOutputFK = false;
 unsigned long lastSerialOutput = 0;
 unsigned long serialOutputInterval = 100; // ms between outputs (default 10Hz)
 
+/*
 const char* wifi_mac() {
     static String m;
     m = WiFi.macAddress();
@@ -38,9 +43,10 @@ const char* wifi_ip() {
 bool wifi_is_connected() {
     return WiFi.status() == WL_CONNECTED;
 }
+*/
 
 // HTTP handler for /rawAdcValues - returns JSON with raw ADC readings
-void handleRawAdcValues() {
+void handleRawAdcValues(AsyncWebServerRequest *request) {
     String json = "{";
     json += "\"valid\": ";
     json += mcp3008_present ? "true" : "false";
@@ -52,10 +58,10 @@ void handleRawAdcValues() {
     }
     json += "]";
     json += "}";
-    server.send(200, "application/json", json);
+    request->send(200, "application/json", json);
 }
 
-void handleFilteredAdcValues() {
+void handleFilteredAdcValues(AsyncWebServerRequest *request) {
     String json = "{";
     json += "\"valid\": ";
     json += mcp3008_present ? "true" : "false";
@@ -67,11 +73,11 @@ void handleFilteredAdcValues() {
     }
     json += "]";
     json += "}";
-    server.send(200, "application/json", json);
+    request->send(200, "application/json", json);
 }
 
 // HTTP handler for /angles - returns JSON with six joint angles in degrees
-void handleAngles() {
+void handleAngles(AsyncWebServerRequest *request) {
     String json = "{";
     json += "\"valid\": ";
     json += mcp3008_present ? "true" : "false";
@@ -86,11 +92,11 @@ void handleAngles() {
     }
     json += "]";
     json += "}";
-    server.send(200, "application/json", json);
+    request->send(200, "application/json", json);
 }
 
 // HTTP handler for /fk - returns JSON with 4x4 transformation matrix from base to end-effector
-void handleForwardKinematics() {
+void handleForwardKinematics(AsyncWebServerRequest *request) {
     //float joint_angles[6];
     //for (int i = 0; i < 6; ++i) {
     //   joint_angles[i] = angles_deg[i];
@@ -125,10 +131,10 @@ void handleForwardKinematics() {
     json += "]";
     json += "}";
     
-    server.send(200, "application/json", json);
+    request->send(200, "application/json", json);
 }
 
-void handleAllData() {
+void handleAllData(AsyncWebServerRequest *request) {
     // Compute forward kinematics
     Matrix4x4 T = IDENTITY_MATRIX;
     //matrix_identity(T);
@@ -176,48 +182,48 @@ void handleAllData() {
     json += "]";
     json += "}";
     
-    server.send(200, "application/json", json);    
+    request->send(200, "application/json", json);    
 }
 
 // Handler to enable/disable serial output of joint angles
-void handleSerialAngles() {
-    if (server.hasArg("enable")) {
-        serialOutputAngles = (server.arg("enable") == "1" || server.arg("enable") == "true");
-        server.send(200, "text/plain", serialOutputAngles ? "Angles output enabled" : "Angles output disabled");
+void handleSerialAngles(AsyncWebServerRequest *request) {
+    if (request->hasArg("enable")) {
+        serialOutputAngles = (request->arg("enable") == "1" || request->arg("enable") == "true");
+        request->send(200, "text/plain", serialOutputAngles ? "Angles output enabled" : "Angles output disabled");
     } else {
-        server.send(400, "text/plain", "Missing 'enable' parameter");
+        request->send(400, "text/plain", "Missing 'enable' parameter");
     }
 }
 
 // Handler to enable/disable serial output of FK data
-void handleSerialFK() {
-    if (server.hasArg("enable")) {
-        serialOutputFK = (server.arg("enable") == "1" || server.arg("enable") == "true");
-        server.send(200, "text/plain", serialOutputFK ? "FK output enabled" : "FK output disabled");
+void handleSerialFK(AsyncWebServerRequest *request) {
+    if (request->hasArg("enable")) {
+        serialOutputFK = (request->arg("enable") == "1" || request->arg("enable") == "true");
+        request->send(200, "text/plain", serialOutputFK ? "FK output enabled" : "FK output disabled");
     } else {
-        server.send(400, "text/plain", "Missing 'enable' parameter");
+        request->send(400, "text/plain", "Missing 'enable' parameter");
     }
 }
 
 // Handler to set serial output frequency
-void handleSerialFrequency() {
-    if (server.hasArg("hz")) {
-        float hz = server.arg("hz").toFloat();
+void handleSerialFrequency(AsyncWebServerRequest *request) {
+    if (request->hasArg("hz")) {
+        float hz = request->arg("hz").toFloat();
         if (hz > 0 && hz <= 1000) {
             serialOutputInterval = (unsigned long)(1000.0 / hz);
             String response = "Serial output frequency set to " + String(hz, 1) + " Hz (" + String(serialOutputInterval) + " ms)";
-            server.send(200, "text/plain", response);
+            request->send(200, "text/plain", response);
         } else {
-            server.send(400, "text/plain", "Frequency must be between 0.1 and 1000 Hz");
+            request->send(400, "text/plain", "Frequency must be between 0.1 and 1000 Hz");
         }
     } else {
         String response = "Current: " + String(1000.0 / serialOutputInterval, 1) + " Hz (" + String(serialOutputInterval) + " ms)";
-        server.send(200, "text/plain", response);
+        request->send(200, "text/plain", response);
     }
 }
 
 // Handler to return D-H parameters as JSON
-void handleDHParams() {
+void handleDHParams(AsyncWebServerRequest *request) {
     String json = "{";
     json += "\"dhParams\": [";
     for (int i = 0; i < 6; i++) {
@@ -232,10 +238,10 @@ void handleDHParams() {
     }
     json += "]";
     json += "}";
-    server.send(200, "application/json", json);
+    request->send(200, "application/json", json);
 }
 
-void handleRoot() {
+void handleRoot(AsyncWebServerRequest *request) {
     static String cachedIndexHtml = "";
     static bool isLoaded = false;
     
@@ -265,14 +271,14 @@ void handleRoot() {
     
     // Serve the cached content
     if (isLoaded) {
-        server.send(200, "text/html", cachedIndexHtml);
+        request->send(200, "text/html", cachedIndexHtml);
     } else {
-        server.send(404, "text/plain", "index.html not found");
+        request->send(404, "text/plain", "index.html not found");
     }
 }
 
 // HTTP handler to serve the robotView.html file from LittleFS
-void handleRobotView() {
+void handleRobotView(AsyncWebServerRequest *request) {
     static String cachedRobotViewHtml = "";
     static bool robotViewLoaded = false;
 
@@ -302,12 +308,13 @@ void handleRobotView() {
     }
 
     if (robotViewLoaded) {
-        server.send(200, "text/html", cachedRobotViewHtml);
+        request->send(200, "text/html", cachedRobotViewHtml);
     } else {
-        server.send(404, "text/plain", "robotView.html not found on LittleFS");
+        request->send(404, "text/plain", "robotView.html not found on LittleFS");
     }
 }
 
+/*
 bool sendHeartBeat() {
     //WiFiClientSecure client; // TLS required by server
     //client.setInsecure();    // Skip certificate validation to keep code small; still uses HTTPS transport
@@ -328,9 +335,13 @@ bool sendHeartBeat() {
     //    Serial.println("Heartbeat GET begin() failed");
     //}
 }
-
+*/
 
 void wifi_setup() {
+    manager.init({{SSID, PASS}});
+
+    /*
+
     WiFi.mode(WIFI_STA);
 
     //Serial.printf("MAC address: %s\n", wifi_mac());
@@ -359,23 +370,27 @@ void wifi_setup() {
         Serial.println("Failed to connect within timeout.");
         display_message("Failed to connect!");
     }
+    */
+
+    AsyncWebServer& server = manager.server;
 
     // Start web server regardless (will still serve local info even if not connected)
-    server.on("/", handleRoot);
-    server.on("/index.html", handleRoot);
-    server.on("/robotView.html", handleRobotView);
-    server.on("/allData", handleAllData);
-    server.on("/angles", handleAngles);
-    server.on("/rawAdcValues", handleRawAdcValues);
-    server.on("/filteredAdcValues", handleFilteredAdcValues);
-    server.on("/fk", handleForwardKinematics);
-    server.on("/serialAngles", handleSerialAngles);
-    server.on("/serialFK", handleSerialFK);
-    server.on("/serialFrequency", handleSerialFrequency);
-    server.on("/dhParams", handleDHParams);
+    manager.server.on("/", [] (AsyncWebServerRequest *request) { handleRoot(request); });
+    manager.server.on("/index.html", [] (AsyncWebServerRequest *request) { handleRoot(request); });
+    manager.server.on("/robotView.html", [] (AsyncWebServerRequest *request) { handleRobotView(request); });
+    manager.server.on("/allData", [] (AsyncWebServerRequest *request) { handleAllData(request); });
+    manager.server.on("/angles", [] (AsyncWebServerRequest *request) { handleAngles(request); });
+    manager.server.on("/rawAdcValues", [] (AsyncWebServerRequest *request) { handleRawAdcValues(request); });
+    manager.server.on("/filteredAdcValues", [] (AsyncWebServerRequest *request) { handleFilteredAdcValues(request); });
+    manager.server.on("/fk", [] (AsyncWebServerRequest *request) { handleForwardKinematics(request); });
+    manager.server.on("/serialAngles", [] (AsyncWebServerRequest *request) { handleSerialAngles(request); });
+    manager.server.on("/serialFK", [] (AsyncWebServerRequest *request) { handleSerialFK(request); });
+    manager.server.on("/serialFrequency", [] (AsyncWebServerRequest *request) { handleSerialFrequency(request); });
+    manager.server.on("/dhParams", [] (AsyncWebServerRequest *request) { handleDHParams(request); });
     server.begin();
     //Serial.printf("HTTP server started on port 80\n");
 
+    /*
     client.setInsecure();
     if (heartbeatHttp.begin(client, HEARTBEAT_URL)) {
         //Serial.println("heartbeatHttp begin() success");
@@ -385,19 +400,22 @@ void wifi_setup() {
         Serial.println("heartbeatHttp begin() failed!");
         heartbeatInitialized = false;
     }
+    */
 }
 
 void wifi_loop() {
-    server.handleClient();
-
+    manager.loop();
+    //manager.server.handleClient();
+    
     // simple auto-reconnect logic
+    /*
     if (WiFi.status() != WL_CONNECTED) {
         if (millis() - s_lastReconnect > 5000) {
             s_lastReconnect = millis();
             if (SSID && PASS) WiFi.begin(SSID, PASS);
             update_display();
         }
-    }
+    }*/
 
     // Serial output of joint angles and/or FK data
     if ((serialOutputAngles || serialOutputFK) && mcp3008_present) {
@@ -432,6 +450,7 @@ void wifi_loop() {
         }
     }
 
+    /*
     // Periodically report device status every 10 seconds while connected
     if (SEND_HEARTBEAT && heartbeatInitialized && wifi_is_connected()) {
         unsigned long now = millis();
@@ -448,4 +467,5 @@ void wifi_loop() {
             }
         }
     }
+    */
 }
