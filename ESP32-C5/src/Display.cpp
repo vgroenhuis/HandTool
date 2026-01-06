@@ -71,7 +71,7 @@ void update_display() {
     }
     u8g2.clearBuffer();
     u8g2.setCursor(0, 10);
-    u8g2.printf("IP: %s", wifi_ip());
+    u8g2.printf("IP: %s", "??");//manager.getIP().c_str());
     u8g2.setCursor(0,20);
     u8g2.printf("%s", WEB_ADDRESS);
     for (int i = 0; i < 6; i++) {
