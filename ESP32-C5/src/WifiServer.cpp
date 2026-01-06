@@ -9,6 +9,8 @@
 #include "Display.h"
 #include "Kinematics.h"
 
+RoamingWiFiManager manager;
+
 /*
 static unsigned long s_lastReconnect = 0;
 static unsigned long s_lastStatusPing = 0;
