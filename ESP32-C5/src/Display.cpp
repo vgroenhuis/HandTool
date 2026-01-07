@@ -56,7 +56,12 @@ void display_setup() {
     u8g2.clearBuffer();
     // Use a very compact built-in font to reduce flash footprint
     u8g2.setFont(u8g2_font_5x7_tr);
-    u8g2.drawStr(0,0,"HandTool Display");
+    u8g2.setCursor(0, 10);
+    u8g2.printf("HandTool Display");
+    u8g2.setCursor(0, 20);
+#ifndef DISABLE_WIFI
+    u8g2.printf("%s", manager.getMAC().c_str());
+#endif
     u8g2.sendBuffer();
     //Serial.printf("Display initialized\n");
 }
@@ -71,11 +76,18 @@ void update_display() {
     }
     u8g2.clearBuffer();
     u8g2.setCursor(0, 10);
-    u8g2.printf("IP: %s", "??");//manager.getIP().c_str());
+#ifndef DISABLE_WIFI
+    u8g2.printf("IP: %s", manager.getConnectedIp().c_str());
+#endif
     u8g2.setCursor(0,20);
     u8g2.printf("%s", WEB_ADDRESS);
     for (int i = 0; i < 6; i++) {
         u8g2.setCursor(i*20,30);
+        u8g2.printf("%d", raw_adc[i]);
+    }
+
+    for (int i = 0; i < 6; i++) {
+        u8g2.setCursor(i*20,40);
         u8g2.printf("%.0f", angles_deg[i]);
     }
 
@@ -86,10 +98,14 @@ void update_display() {
         T = compute_forward_kinematics(angles_deg);
     }
 
-    u8g2.setCursor(0,40);
+    u8g2.setCursor(0,50);
     u8g2.printf("X:%.1f Y:%.1f Z:%.1f", T.m[0][3]*1000, T.m[1][3]*1000, T.m[2][3]*1000);
 
-    u8g2.setCursor(0,50);
+    u8g2.setCursor(0,60);
+    if (!mcp3008_present) {
+        u8g2.printf("MCP3008 fail! ");
+    }
+    u8g2.printf("Btn:%s", dragButtonPressed ? "P" : "");
     u8g2.sendBuffer();
 }
 

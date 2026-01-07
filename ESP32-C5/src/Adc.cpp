@@ -1,10 +1,11 @@
 #include "Adc.h"
 
+bool mcp3008_present = false;
+bool dragButtonPressed = false; // state of drag button
+
 uint16_t raw_adc[8] = {0};
 float filtered_adc[8] = {0};
 float angles_deg[6] = {0.0};
-bool mcp3008_present = false;
-bool dragButtonPressed = false; // state of drag button
 
 // Low-pass filter state (exponential moving average)
 bool filter_initialized = false;
@@ -60,17 +61,25 @@ bool probe_mcp3008_presence() {
 }
 
 void robot_setup() {
-    // Initialize SPI and Adafruit MCP3008 (use hardware SPI pins)
-    SPI.begin(MCP_SCK_PIN, MCP_MISO_PIN, MCP_MOSI_PIN, MCP_CS_PIN);
+    // Initialize CS pin first
+    pinMode(MCP_CS_PIN, OUTPUT);
+    digitalWrite(MCP_CS_PIN, HIGH);  // Deselect the chip initially
+    
+    // Initialize SPI bus (don't pass CS pin to SPI.begin, we manage it manually)
+    SPI.begin(MCP_SCK_PIN, MCP_MISO_PIN, MCP_MOSI_PIN);
+    
+    delay(10);  // Allow time for SPI to stabilize
+    
     if (!mcp.begin(MCP_CS_PIN, &SPI)) {
         Serial.println("Failed to initialize MCP3008");
         mcp3008_present = false;
     } else {
+        delay(10);  // Allow time for MCP3008 to initialize
         // Perform a few reads to verify presence over SPI
         bool ok = probe_mcp3008_presence();
         mcp3008_present = ok;
         if (ok) {
-            //Serial.println("MCP3008 detected via SPI probe");
+            Serial.println("MCP3008 detected via SPI probe");
         } else {
             Serial.println("WARNING: MCP3008 not detected (SPI reads look invalid)");
         }

@@ -9,7 +9,9 @@
 #include "Display.h"
 #include "Kinematics.h"
 
+#ifndef DISABLE_WIFI
 RoamingWiFiManager manager;
+#endif
 
 /*
 static unsigned long s_lastReconnect = 0;
@@ -340,7 +342,8 @@ bool sendHeartBeat() {
 */
 
 void wifi_setup() {
-    manager.init({{SSID, PASS}});
+#ifndef DISABLE_WIFI
+    manager.init(WIFI_CREDENTIALS, ADMIN_CREDENTIALS, ALIAS_URL);
 
     /*
 
@@ -374,8 +377,6 @@ void wifi_setup() {
     }
     */
 
-    AsyncWebServer& server = manager.server;
-
     // Start web server regardless (will still serve local info even if not connected)
     manager.server.on("/", [] (AsyncWebServerRequest *request) { handleRoot(request); });
     manager.server.on("/index.html", [] (AsyncWebServerRequest *request) { handleRoot(request); });
@@ -389,7 +390,6 @@ void wifi_setup() {
     manager.server.on("/serialFK", [] (AsyncWebServerRequest *request) { handleSerialFK(request); });
     manager.server.on("/serialFrequency", [] (AsyncWebServerRequest *request) { handleSerialFrequency(request); });
     manager.server.on("/dhParams", [] (AsyncWebServerRequest *request) { handleDHParams(request); });
-    server.begin();
     //Serial.printf("HTTP server started on port 80\n");
 
     /*
@@ -403,10 +403,14 @@ void wifi_setup() {
         heartbeatInitialized = false;
     }
     */
+#endif
+
 }
 
 void wifi_loop() {
+#ifndef DISABLE_WIFI
     manager.loop();
+#endif
     //manager.server.handleClient();
     
     // simple auto-reconnect logic

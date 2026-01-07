@@ -6,9 +6,9 @@
 #include <LittleFS.h>
 #include <esp_sleep.h>
 
-void sleep_setup() {
+void sleep_setup() {   
     esp_sleep_enable_ext1_wakeup_io(1<<4, ESP_EXT1_WAKEUP_ANY_LOW);
-    esp_sleep_enable_timer_wakeup(10 /*minutes*/ * 60 * 1000000);
+    //esp_sleep_enable_timer_wakeup(10 /*minutes*/ * 60 * 1000000);
     //esp_sleep_enable_timer_wakeup(5 /*seconds*/ * 1000000);
 }
 
@@ -26,7 +26,7 @@ void init_file_system() {
 
 void setupHandTool() {
     //rgbLedWrite(LED_BUILTIN, 255, 255, 255);
-    rgbLedWrite(LED_BUILTIN, 255, 0, 0);
+    //rgbLedWrite(LED_BUILTIN, 255, 0, 0);
     Serial.begin(115200);
     delay(100);
     sleep_setup();
@@ -35,10 +35,10 @@ void setupHandTool() {
     robot_setup();
     kinematics_init();
     if (isPowerSwitchOn()) {
-        rgbLedWrite(LED_BUILTIN, 30, 10, 0); // Orange during setup
+        //rgbLedWrite(LED_BUILTIN, 30, 10, 0); // Orange during setup
         wifi_setup();
     }
-    rgbLedWrite(LED_BUILTIN, 0, 10, 0); // Green when setup complete
+    //rgbLedWrite(LED_BUILTIN, 0, 10, 0); // Green when setup complete
 }
 
 
@@ -63,8 +63,10 @@ void printValuesPeriodically() {
 void startDeepSleep() {
     delay(10);
     display_message("Going to sleep...");
-    rgbLedWrite(LED_BUILTIN, 255, 255, 255);
-    delay(5000); // wait five seconds
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    //rgbLedWrite(LED_BUILTIN, 255, 255, 255);
+    delay(500);
     rgbLedWrite(LED_BUILTIN, 0, 0, 0);
     display_off();
     delay(10);
@@ -82,7 +84,7 @@ void loopHandTool() {
     sensors_loop();
     display_loop();
     wifi_loop();
-    //printValuesPeriodically();
+    printValuesPeriodically();
     //delay(1);
 }
 
