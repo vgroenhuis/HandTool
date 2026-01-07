@@ -275,7 +275,9 @@ void handleRoot(AsyncWebServerRequest *request) {
     
     // Serve the cached content
     if (isLoaded) {
-        request->send(200, "text/html", cachedIndexHtml);
+        String html = cachedIndexHtml;
+        html.replace("$BATTERY_VOLTAGE$", String(getBatteryLevel(), 2));
+        request->send(200, "text/html", html);
     } else {
         request->send(404, "text/plain", "index.html not found");
     }

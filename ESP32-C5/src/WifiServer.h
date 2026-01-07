@@ -2,6 +2,14 @@
 
 #include "RoamingWiFiManager.h"
 
+#if __has_include("credentials.h")
+  #include "credentials.h"
+#else
+    #define WIFI_CREDENTIALS {{"your-ssid","your-password"},{"your-ssid2","your-password2"}}
+    #define ADMIN_CREDENTIALS {"",""}
+    #define ALIAS_URL ""
+#endif
+
 #define SEND_HEARTBEAT false
 
 static const char* HOSTNAME = "HandTool";

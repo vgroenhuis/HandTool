@@ -62,13 +62,14 @@ bool probe_mcp3008_presence() {
 
 void robot_setup() {
     // Initialize CS pin first
-    pinMode(MCP_CS_PIN, OUTPUT);
-    digitalWrite(MCP_CS_PIN, HIGH);  // Deselect the chip initially
+    //pinMode(MCP_CS_PIN, OUTPUT);
+    //digitalWrite(MCP_CS_PIN, HIGH);  // Deselect the chip initially
     
     // Initialize SPI bus (don't pass CS pin to SPI.begin, we manage it manually)
     SPI.begin(MCP_SCK_PIN, MCP_MISO_PIN, MCP_MOSI_PIN);
+    //SPI.setFrequency(100000);  // 100 kHz clock speed for stability
     
-    delay(10);  // Allow time for SPI to stabilize
+    //delay(10);  // Allow time for SPI to stabilize
     
     if (!mcp.begin(MCP_CS_PIN, &SPI)) {
         Serial.println("Failed to initialize MCP3008");
@@ -124,4 +125,14 @@ void sensors_loop() {
         dragButtonPressed = (raw_adc[6] < 512);
         filter_initialized = true;
     }    
+}
+
+float getBatteryLevel() {
+    // Read battery voltage from ADC1_CH5 (GPIO33)
+    //int raw = analogRead(A5);
+    int mv = analogReadMilliVolts(A5);
+    // Convert raw ADC value to voltage (assuming 12-bit ADC and 3.3V reference)
+    //float voltage = (raw / 4095.0) * 3.30 * 36; // Assuming a voltage divider with equal resistors
+    float voltage = mv * 3.0 / 1000.0;
+    return voltage;
 }

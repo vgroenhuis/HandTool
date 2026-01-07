@@ -105,7 +105,10 @@ void update_display() {
     if (!mcp3008_present) {
         u8g2.printf("MCP3008 fail! ");
     }
-    u8g2.printf("Btn:%s", dragButtonPressed ? "P" : "");
+    u8g2.printf("Battery: %.2fV ", getBatteryLevel());
+    if (dragButtonPressed) {
+        u8g2.printf("Button");
+    }
     u8g2.sendBuffer();
 }
 

@@ -8,8 +8,6 @@
 
 void sleep_setup() {   
     esp_sleep_enable_ext1_wakeup_io(1<<4, ESP_EXT1_WAKEUP_ANY_LOW);
-    //esp_sleep_enable_timer_wakeup(10 /*minutes*/ * 60 * 1000000);
-    //esp_sleep_enable_timer_wakeup(5 /*seconds*/ * 1000000);
 }
 
 bool isPowerSwitchOn() {
@@ -44,6 +42,8 @@ void setupHandTool() {
 
 
 void setup() {
+    analogReadResolution(12);
+    pinMode(A5, INPUT); // Battery voltage ADC
     setupHandTool();
 }
 
@@ -56,6 +56,7 @@ void printValuesPeriodically() {
         for (uint8_t ch = 0; ch < 8; ++ch) {
             Serial.printf(" CH%u=%u", ch, raw_adc[ch]);
         }
+        Serial.printf(" Battery: ADC5=%d Voltage=%.2fV", analogRead(A5), getBatteryLevel());
         Serial.println();
     }
 }
@@ -84,7 +85,7 @@ void loopHandTool() {
     sensors_loop();
     display_loop();
     wifi_loop();
-    printValuesPeriodically();
+    //printValuesPeriodically();
     //delay(1);
 }
 
