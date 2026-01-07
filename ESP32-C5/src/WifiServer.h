@@ -2,8 +2,8 @@
 
 #include "RoamingWiFiManager.h"
 
-#if __has_include("credentials.h")
-  #include "credentials.h"
+#if __has_include("WiFiCredentials.h")
+    #include "WiFiCredentials.h"
 #else
     #define WIFI_CREDENTIALS {{"your-ssid","your-password"},{"your-ssid2","your-password2"}}
     #define ADMIN_CREDENTIALS {"",""}

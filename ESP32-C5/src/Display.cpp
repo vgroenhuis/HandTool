@@ -81,10 +81,12 @@ void update_display() {
 #endif
     u8g2.setCursor(0,20);
     u8g2.printf("%s", WEB_ADDRESS);
-    for (int i = 0; i < 6; i++) {
-        u8g2.setCursor(i*20,30);
-        u8g2.printf("%d", raw_adc[i]);
-    }
+    // for (int i = 0; i < 6; i++) {
+    //     u8g2.setCursor(i*20,30);
+    //     u8g2.printf("%d", raw_adc[i]);
+    // }
+    u8g2.setCursor(0,30);
+    u8g2.printf("Joint angles (deg):");
 
     for (int i = 0; i < 6; i++) {
         u8g2.setCursor(i*20,40);
