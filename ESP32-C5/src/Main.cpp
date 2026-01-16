@@ -6,13 +6,17 @@
 #include <LittleFS.h>
 #include <esp_sleep.h>
 
+/*
 void sleep_setup() {   
     esp_sleep_enable_ext1_wakeup_io(1<<4, ESP_EXT1_WAKEUP_ANY_LOW);
 }
+*/
 
+/*
 bool isPowerSwitchOn() {
     return digitalRead(4) == LOW;
 }
+*/
 
 void init_file_system() {
     if (!LittleFS.begin(true, "/littlefs", 10, "littlefs")) {
@@ -27,17 +31,18 @@ void setupHandTool() {
     //rgbLedWrite(LED_BUILTIN, 255, 0, 0);
     Serial.begin(115200);
     delay(100);
-    sleep_setup();
+    //sleep_setup();
     init_file_system();
     display_setup();
     robot_setup();
     kinematics_init();
-    if (isPowerSwitchOn()) {
-        //rgbLedWrite(LED_BUILTIN, 30, 10, 0); // Orange during setup
-        wifi_setup();
-    }
-    //rgbLedWrite(LED_BUILTIN, 0, 10, 0); // Green when setup complete
+    wifi_setup();
 }
+
+//if (isPowerSwitchOn()) {
+        //rgbLedWrite(LED_BUILTIN, 30, 10, 0); // Orange during setup
+    //}
+    //rgbLedWrite(LED_BUILTIN, 0, 10, 0); // Green when setup complete
 
 
 
@@ -61,6 +66,7 @@ void printValuesPeriodically() {
     }
 }
 
+/*
 void startDeepSleep() {
     delay(10);
     display_message("Going to sleep...");
@@ -79,9 +85,10 @@ void testDeepSleep() {
         startDeepSleep();
     }
 }
+*/
 
 void loopHandTool() {
-    testDeepSleep();
+    //testDeepSleep();
     sensors_loop();
     display_loop();
     wifi_loop();
