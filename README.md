@@ -83,5 +83,3 @@ Upcoming features
 ## Phyiscal devices
 
 First HandTool at RaM [handtool.roaming.utwente.nl](http://handtool.roaming.utwente.nl/) (accessible from within University of Twente's network)
-
-Status of Vincent's physical devices: see [this page](https://vincentgroenhuis.nl/devices/device_display.php).
