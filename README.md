@@ -17,6 +17,19 @@ The tool is WiFi enabled; the microcontroller serves webpages and provides sever
 
 The microcontroller is an ESP32-C5-DevKitC-1. It is chosen for its 5 GHz WiFi capabilities, which is essential inside university buildings due to congestion in the 2.4 GHz band. A MCP3008 A/D unit measures the potentiometer values while a 1.3" OLED displays some status information.
 
+# Firmware
+
+Two versions for the ESP32-C5:
+
+- [ESP32-C5-IDF](ESP32-C5-IDF) (ESP-IDF, current): Wi-Fi settings stored on the device, status reports to the
+  [CloSer lab demos page](https://closer.ram.eemcs.utwente.nl/labdemos/demo?id=handtool), over-the-air updates, a 50 Hz
+  WebSocket stream, zero calibration saved on the device. Same pages and HTTP endpoints as the Arduino version.
+- [ESP32-C5](ESP32-C5) (Arduino/PlatformIO, the original).
+
+On the lab demos site the HandTool can also be used from anywhere to
+[move objects in 3D](https://closer.ram.eemcs.utwente.nl/labdemos/apps/handtool/object.html) or play a
+[buzz-wire game](https://closer.ram.eemcs.utwente.nl/labdemos/apps/handtool/game.html).
+
 # User interface
 
 THe main user interface is accessed in a web browser at the device's address. The device connects to university's iotroam network, registered at iotroam.nl. A hostname can be coupled to its MAC address to give it a static hostname, such as handtool.roaming.utwente.nl . The IP address is also displayed on the screen, which is useful as it is dynamic and a change in IP address takes a few minutes to propagate through the DNS servers.

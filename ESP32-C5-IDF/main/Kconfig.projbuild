@@ -1,0 +1,47 @@
+menu "HandTool"
+    config HANDTOOL_MCP_SCK_GPIO
+        int "MCP3008 SCK GPIO"
+        default 0
+        help
+            GPIO6 does not work on the Waveshare board (battery ADC).
+    config HANDTOOL_MCP_MOSI_GPIO
+        int "MCP3008 MOSI (DIN) GPIO"
+        default 8
+    config HANDTOOL_MCP_MISO_GPIO
+        int "MCP3008 MISO (DOUT) GPIO"
+        default 7
+    config HANDTOOL_MCP_CS_GPIO
+        int "MCP3008 CS GPIO"
+        default 9
+    config HANDTOOL_MCP_CLOCK_KHZ
+        int "MCP3008 SPI clock (kHz)"
+        default 1000
+        range 10 1350
+    config HANDTOOL_SAMPLE_MS
+        int "Sampling period (ms)"
+        default 10
+        range 2 100
+    config HANDTOOL_FILTER_MS
+        int "Low-pass filter time constant (ms)"
+        default 50
+        range 0 2000
+    config HANDTOOL_BUTTON_CHANNEL
+        int "MCP3008 channel of the drag button (pressed: below half scale)"
+        default 6
+        range 0 7
+    config HANDTOOL_OLED_SDA_GPIO
+        int "OLED (SH1106, I2C) SDA GPIO"
+        default 2
+    config HANDTOOL_OLED_SCL_GPIO
+        int "OLED (SH1106, I2C) SCL GPIO"
+        default 3
+    config HANDTOOL_BATTERY_GPIO
+        int "Battery voltage ADC GPIO (-1: none)"
+        default 6
+    config HANDTOOL_BATTERY_DIVIDER_X100
+        int "Battery voltage divider ratio x 100"
+        default 300
+    config HANDTOOL_WEB_ADDRESS
+        string "Host name shown on the display"
+        default "handtool.roaming.utwente.nl"
+endmenu

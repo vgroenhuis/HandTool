@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HandTool</title>
+<style>
+:root { --bg: #f6f7f9; --card: #fff; --text: #1d2330; --muted: #5d6677; --line: #dde1e8; --accent: #2a64c8; --ok: #1b8a4a; --bad: #c0392b; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #11151c; --card: #1a2029; --text: #e4e8ef; --muted: #98a2b3; --line: #2c3442; --accent: #6ea0ff; --ok: #4cc27f; --bad: #ff7a6b; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.45; }
+main { max-width: 860px; margin: 0 auto; padding: 16px; }
+h1 { margin: 4px 0 2px; font-size: 1.6rem; }
+h2 { font-size: 1.05rem; margin: 0 0 10px; }
+.sub { color: var(--muted); margin: 0 0 16px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+.top { display: grid; grid-template-columns: 220px 1fr; gap: 16px; align-items: start; }
+.top img { width: 100%; border-radius: 8px; border: 1px solid var(--line); }
+@media (max-width: 600px) { .top { grid-template-columns: 1fr; } .top img { max-width: 260px; } }
+.btn { display: inline-block; background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 8px 14px; font-size: .95rem; text-decoration: none; cursor: pointer; }
+.btn.secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+.val { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
+.val span { display: block; color: var(--muted); font-size: .8rem; }
+.val b { font-variant-numeric: tabular-nums; font-size: 1.1rem; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: .8rem; border: 1px solid var(--line); }
+.pill.ok { color: var(--ok); border-color: var(--ok); }
+.pill.bad { color: var(--bad); border-color: var(--bad); }
+code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .9em; }
+ul.endpoints { padding-left: 18px; margin: 0; }
+ul.endpoints li { margin: 3px 0; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+input[type=number] { width: 90px; padding: 5px; border-radius: 5px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+.muted { color: var(--muted); font-size: .9rem; }
+#msg { min-height: 1.2em; }
+</style>
+</head>
+<body>
+<main>
+  <div class="card top">
+    <img src="/handtool.jpg" alt="The HandTool">
+    <div>
+      <h1>HandTool</h1>
+      <p class="sub">Handheld 6-DoF input device: six potentiometers, a drag button in the tip, an ESP32-C5.</p>
+      <div class="row">
+        <a class="btn" href="/robotView.html">Open the 3D view</a>
+        <a class="btn secondary" href="https://closer.ram.eemcs.utwente.nl/labdemos/" target="_blank" rel="noopener">Lab demos page</a>
+        <a class="btn secondary" href="https://github.com/vgroenhuis/HandTool" target="_blank" rel="noopener">GitHub</a>
+      </div>
+      <p class="muted" id="statusLine">Connecting...</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Live</h2>
+    <div class="grid" id="angles"></div>
+    <div class="grid" style="margin-top:8px">
+      <div class="val"><span>x</span><b id="x">-</b></div>
+      <div class="val"><span>y</span><b id="y">-</b></div>
+      <div class="val"><span>z</span><b id="z">-</b></div>
+      <div class="val"><span>Drag button</span><b id="button">-</b></div>
+      <div class="val"><span>Battery</span><b id="battery">-</b></div>
+      <div class="val"><span>Samples/s</span><b id="hz">-</b></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Zero calibration</h2>
+    <p class="muted">The joint angles are measured from a zero pose: all joints at 0 degrees, as in the 3D view with every slider
+      at 0. If the 3D view doesn't match the tool, put the tool in that pose and press <b>Set zero here</b>. It is saved on the
+      device. <b>Factory zero</b> goes back to the values of the original firmware.</p>
+    <div class="row">
+      <button class="btn" id="zeroBtn">Set zero here</button>
+      <button class="btn secondary" id="resetZeroBtn">Factory zero</button>
+      <span class="muted" id="zeroInfo"></span>
+    </div>
+    <div id="msg" class="muted"></div>
+  </div>
+
+  <div class="card">
+    <h2>Serial output (USB)</h2>
+    <div class="row"><label><input type="checkbox" id="serialAngles"> Joint angles (<code>$ANGLES: ms, j1..j6</code>)</label></div>
+    <div class="row"><label><input type="checkbox" id="serialFK"> End-effector matrix (<code>$FK: ms, 16 values</code>)</label></div>
+    <div class="row">Frequency <input type="number" id="serialHz" min="0.1" max="1000" step="0.1" value="10"> Hz
+      <button class="btn secondary" id="serialHzBtn">Set</button> <span class="muted" id="serialHzInfo"></span></div>
+  </div>
+
+  <div class="card">
+    <h2>HTTP endpoints</h2>
+    <ul class="endpoints">
+      <li><a href="/robotView.html">/robotView.html</a> 3D view (moves with the tool; sliders when it isn't connected)</li>
+      <li><a href="/allData">/allData</a> all data as JSON: raw and filtered ADC values, joint angles, end-effector matrix, battery</li>
+      <li><a href="/angles">/angles</a> joint angles in degrees, drag button</li>
+      <li><a href="/rawAdcValues">/rawAdcValues</a>, <a href="/filteredAdcValues">/filteredAdcValues</a> ADC readings</li>
+      <li><a href="/fk">/fk</a> end-effector to base transformation (4x4, metres)</li>
+      <li><a href="/dhParams">/dhParams</a> Denavit-Hartenberg parameters</li>
+      <li><code>ws://&lt;address&gt;/ws</code> WebSocket: /allData 50 times a second (send any message to start)</li>
+      <li><a href="/api/state">/api/state</a> firmware, sensors, Wi-Fi, calibration</li>
+      <li><code>POST /api/zero</code> (<code>?reset=1</code>), <code>GET/POST /api/calibration</code> zero calibration</li>
+      <li><code>/serialAngles?enable=1</code>, <code>/serialFK?enable=1</code>, <code>/serialFrequency?hz=10</code> serial output</li>
+    </ul>
+  </div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const angleBoxes = [];
+for (let i = 0; i < 6; i++) {
+  const d = document.createElement('div');
+  d.className = 'val';
+  d.innerHTML = `<span>Joint ${i + 1}</span><b>-</b>`;
+  $('angles').append(d);
+  angleBoxes.push(d.querySelector('b'));
+}
+
+function show(j) {
+  if (j.valid === false) {
+    angleBoxes.forEach((b) => b.textContent = '-');
+    ['x', 'y', 'z'].forEach((k) => $(k).textContent = '-');
+  } else {
+    j.jointAngles.forEach((a, i) => angleBoxes[i].textContent = a.toFixed(1) + '°');
+    $('x').textContent = (j.matrix[0][3] * 1000).toFixed(1) + ' mm';
+    $('y').textContent = (j.matrix[1][3] * 1000).toFixed(1) + ' mm';
+    $('z').textContent = (j.matrix[2][3] * 1000).toFixed(1) + ' mm';
+  }
+  $('button').textContent = j.dragButtonPressed ? 'pressed' : 'released';
+  $('battery').textContent = j.battery > 0.1 ? j.battery.toFixed(2) + ' V' : '-';
+  $('hz').textContent = j.hz;
+}
+
+let lastData = 0;
+function openSocket() {
+  const ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
+  ws.onopen = () => ws.send('stream');
+  let shown = 0;
+  ws.onmessage = (ev) => {
+    lastData = Date.now();
+    if (lastData - shown < 100) return;   // 10 updates a second are plenty for numbers
+    shown = lastData;
+    try { show(JSON.parse(ev.data)); } catch (e) {}
+  };
+  ws.onclose = () => setTimeout(openSocket, 2000);
+  ws.onerror = () => ws.close();
+}
+openSocket();
+setInterval(async () => {   // fallback while the stream is silent
+  if (Date.now() - lastData < 1500) return;
+  try { show(await (await fetch('/allData')).json()); } catch (e) {}
+}, 500);
+
+async function refreshState() {
+  try {
+    const s = await (await fetch('/api/state')).json();
+    const parts = [`firmware ${s.fw}`];
+    parts.push(s.adc_ok ? 'sensors <span class="pill ok">ok</span>' : 'sensors <span class="pill bad">MCP3008 not found</span>');
+    parts.push(s.display_ok ? 'display <span class="pill ok">ok</span>' : 'display <span class="pill bad">not found</span>');
+    if (s.rssi) parts.push(`Wi-Fi ${s.rssi} dBm`);
+    if (s.note) parts.push(s.note);
+    $('statusLine').innerHTML = parts.join(' · ');
+    $('zeroInfo').textContent = s.factory_zero ? 'using the factory zero' : 'using a saved zero: ' + s.zero.join(', ');
+  } catch (e) {
+    $('statusLine').textContent = 'The device does not answer.';
+  }
+}
+refreshState();
+setInterval(refreshState, 5000);
+
+async function post(url, okText) {
+  try {
+    const r = await fetch(url, { method: 'POST' });
+    $('msg').textContent = r.ok ? okText : 'Failed: ' + await r.text();
+  } catch (e) { $('msg').textContent = 'Failed: ' + e; }
+  refreshState();
+}
+$('zeroBtn').onclick = () => {
+  if (confirm('Is the HandTool in its zero pose (all joints at 0 degrees, as in the 3D view)?')) post('/api/zero', 'Zero saved.');
+};
+$('resetZeroBtn').onclick = () => post('/api/zero?reset=1', 'Factory zero restored.');
+
+$('serialAngles').onchange = (e) => fetch('/serialAngles?enable=' + (e.target.checked ? 1 : 0));
+$('serialFK').onchange = (e) => fetch('/serialFK?enable=' + (e.target.checked ? 1 : 0));
+$('serialHzBtn').onclick = async () => {
+  const r = await fetch('/serialFrequency?hz=' + $('serialHz').value);
+  $('serialHzInfo').textContent = await r.text();
+};
+</script>
+</body>
+</html>
