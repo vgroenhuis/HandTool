@@ -1,6 +1,7 @@
 #include "closer_demo.h"
 
 #include <ctype.h>
+#include <stdarg.h>
 #include <string.h>
 #include <sys/time.h>
 
@@ -48,7 +49,9 @@ static struct {
     bool ota_busy;
     bool roam_pending;          // connecting to a chosen access point
     int roam_fail, roams;
-} S = {.clients = -1};
+    char wifi[48];              // what Wi-Fi is doing (closer_demo_status_t.wifi)
+    int channel, attempts;
+} S = {.clients = -1, .wifi = "Starting Wi-Fi"};
 
 // ------------------------------------------------------------------ flash settings
 
@@ -126,8 +129,12 @@ void closer_demo_get_status(closer_demo_status_t *out) {
     if (S.lock) {
         xSemaphoreTake(S.lock, portMAX_DELAY);
         strlcpy(out->note, S.message, sizeof out->note);
+        strlcpy(out->wifi, S.wifi, sizeof out->wifi);
         xSemaphoreGive(S.lock);
     }
+    strlcpy(out->ssid, S.ssid, sizeof out->ssid);
+    out->channel = S.channel;
+    out->attempts = S.attempts;
 }
 
 bool closer_demo_wifi_connected(void) { return S.events && (xEventGroupGetBits(S.events) & WIFI_CONNECTED_BIT); }
@@ -145,7 +152,42 @@ static void clear_target(void) {
     S.roam_pending = false;
 }
 
+static void set_wifi_state(const char *fmt, ...) {
+    char text[48];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(text, sizeof text, fmt, ap);
+    va_end(ap);
+    if (S.lock) xSemaphoreTake(S.lock, portMAX_DELAY);
+    strlcpy(S.wifi, text, sizeof S.wifi);
+    if (S.lock) xSemaphoreGive(S.lock);
+}
+
+// Why a connection failed, in words (wifi_err_reason_t).
+static const char *reason_text(int r) {
+    switch (r) {
+        case WIFI_REASON_NO_AP_FOUND: return "Network not found";
+        case WIFI_REASON_AUTH_FAIL:
+        case WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT:
+        case WIFI_REASON_HANDSHAKE_TIMEOUT:
+        case WIFI_REASON_MIC_FAILURE: return "Wrong password?";
+        case WIFI_REASON_ASSOC_FAIL:
+        case WIFI_REASON_ASSOC_EXPIRE:
+        case WIFI_REASON_AUTH_EXPIRE: return "Access point refused";
+        case WIFI_REASON_BEACON_TIMEOUT: return "Signal lost";
+        case WIFI_REASON_ASSOC_LEAVE: return "Disconnected";
+        case WIFI_REASON_CONNECTION_FAIL: return "Connection failed";
+        default: return "Connection lost";
+    }
+}
+
 static void wifi_event(void *arg, esp_event_base_t base, int32_t id, void *data) {
+    if (base == WIFI_EVENT && id == WIFI_EVENT_STA_CONNECTED) {
+        wifi_event_sta_connected_t *e = data;
+        S.channel = e->channel;
+        set_wifi_state("Getting an address");
+        return;
+    }
     if (base == WIFI_EVENT && id == WIFI_EVENT_STA_START) {
         // The band can only be set once Wi-Fi is started, so it is done here, right before the first connect.
 #if CONFIG_CLOSER_WIFI_BAND_5G
@@ -153,19 +195,28 @@ static void wifi_event(void *arg, esp_event_base_t base, int32_t id, void *data)
 #elif CONFIG_CLOSER_WIFI_BAND_2G
         if (esp_wifi_set_band_mode(WIFI_BAND_MODE_2G_ONLY) != ESP_OK) ESP_LOGW(TAG, "could not limit Wi-Fi to 2.4 GHz");
 #endif
+        S.attempts = 1;
+        set_wifi_state("Searching for %s", S.ssid);
         esp_wifi_connect();
     } else if (base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED) {
+        wifi_event_sta_disconnected_t *e = data;
         xEventGroupClearBits(S.events, WIFI_CONNECTED_BIT);
+        S.channel = 0;
+        S.attempts++;
+        set_wifi_state("%s (try %d)", reason_text(e->reason), S.attempts);
+        ESP_LOGW(TAG, "Wi-Fi: %s (reason %d)", reason_text(e->reason), e->reason);
         ESP_LOGW(TAG, "Wi-Fi lost, reconnecting");
         if (S.roam_pending && ++S.roam_fail >= 3) {        // the chosen access point doesn't take us: any will do
             ESP_LOGW(TAG, "Roaming target unreachable");
             clear_target();
         }
         vTaskDelay(pdMS_TO_TICKS(1000));
-        esp_wifi_connect();
+        esp_wifi_connect();      // (the "try N" note stays up while it searches again)
     } else if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *e = data;
         ESP_LOGI(TAG, "Got address " IPSTR, IP2STR(&e->ip_info.ip));
+        S.attempts = 0;
+        set_wifi_state("Connected");
         xEventGroupSetBits(S.events, WIFI_CONNECTED_BIT);
         if (S.roam_pending) clear_target();
     }
@@ -209,7 +260,10 @@ static bool roam_scan(const wifi_ap_record_t *cur) {
                              .scan_time = {.active = {.min = 20, .max = CONFIG_CLOSER_ROAM_SCAN_CHANNEL_MS}},
                              .home_chan_dwell_time = CONFIG_CLOSER_ROAM_SCAN_DWELL_MS};
     closer_demo_set_stat("roam_scans", ++roam_scans);
-    if (esp_wifi_scan_start(&sc, true) != ESP_OK) return false;
+    set_wifi_state("Looking for a better AP");
+    esp_err_t scanned = esp_wifi_scan_start(&sc, true);
+    set_wifi_state("Connected");
+    if (scanned != ESP_OK) return false;
     uint16_t n = 0;
     esp_wifi_scan_get_ap_num(&n);
     if (n > 24) n = 24;
@@ -235,6 +289,7 @@ static bool roam_scan(const wifi_ap_record_t *cur) {
             S.roam_fail = 0;
             S.roams++;
             closer_demo_set_stat("roams", S.roams);
+            set_wifi_state("Moving to a stronger AP");
             esp_wifi_disconnect();                    // the Wi-Fi event handler reconnects, to the chosen one
             moved = true;
         }

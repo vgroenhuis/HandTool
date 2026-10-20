@@ -54,7 +54,7 @@
             <div id="pose">EE: (0.000, 0.000, 0.000) mm</div>
             <div id="camPos" style="font-family: ui-monospace, SFMono-Regular, Consolas, monospace;">Cam: (0.000, 0.000, 0.000)</div>
             <div style="display: flex; gap: 8px; align-items: center;">
-                <a class="btn" href="/">← Back to Index</a>
+                <a class="btn" href="./">← Back to Index</a>
                 <div class="toggle-container">
                     <input type="checkbox" id="autoUpdateToggle" checked>
                     <label for="autoUpdateToggle">Auto Update</label>
@@ -74,8 +74,8 @@
         <script type="importmap">
         {
             "imports": {
-                "three": "/vendor/three.module.min.js",
-                "three/addons/controls/OrbitControls.js": "/vendor/OrbitControls.js"
+                "three": "./vendor/three.module.min.js",
+                "three/addons/controls/OrbitControls.js": "./vendor/OrbitControls.js"
             }
         }
         </script>
@@ -405,7 +405,7 @@
         // Fetch D-H parameters from controller
         async function fetchDHParams() {
             try {
-                const r = await fetch('/dhParams');
+                const r = await fetch('dhParams');
                 if (!r.ok) {
                     console.warn('Failed to fetch D-H parameters from controller, using defaults');
                     return false;
@@ -455,7 +455,7 @@
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 500);
-                const r = await fetch('/angles', { signal: controller.signal });
+                const r = await fetch('angles', { signal: controller.signal });
                 clearTimeout(timeoutId);
                 if (r.ok) applyData(await r.json());
             } catch (e) { /* the next round tries again */ }
@@ -463,7 +463,7 @@
 
         let socket = null, socketAlive = 0;
         function openSocket() {
-            socket = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
+            socket = new WebSocket(new URL('ws', location.href).href.replace(/^http/, 'ws'));
             socket.onopen = () => socket.send('stream');
             socket.onmessage = (ev) => { socketAlive = Date.now(); try { applyData(JSON.parse(ev.data)); } catch (e) {} };
             socket.onclose = () => { socket = null; setTimeout(openSocket, 2000); };

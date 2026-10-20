@@ -33,6 +33,11 @@ typedef struct {
     int rssi;             // dBm, 0 when unknown
     bool updating;        // installing a firmware update right now
     char note[121];       // the short message shown on the demo page ("update failed ...")
+    char wifi[48];        // what Wi-Fi is doing, e.g. "Searching for iotroam", "Joining iotroam (ch 124)",
+                          // "Getting an address", "Connected", "Wrong password? (try 3)", "Looking for a better AP"
+    char ssid[33];        // the network
+    int channel;          // of the access point, 0 when not associated
+    int attempts;         // connection attempts since the last success
 } closer_demo_status_t;
 void closer_demo_get_status(closer_demo_status_t *out);
 

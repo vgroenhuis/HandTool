@@ -40,12 +40,12 @@ input[type=number] { width: 90px; padding: 5px; border-radius: 5px; border: 1px 
 <body>
 <main>
   <div class="card top">
-    <img src="/handtool.jpg" alt="The HandTool">
+    <img src="handtool.jpg" alt="The HandTool">
     <div>
       <h1>HandTool</h1>
       <p class="sub">Handheld 6-DoF input device: six potentiometers, a drag button in the tip, an ESP32-C5.</p>
       <div class="row">
-        <a class="btn" href="/robotView.html">Open the 3D view</a>
+        <a class="btn" href="robotView.html">Open the 3D view</a>
         <a class="btn secondary" href="https://closer.ram.eemcs.utwente.nl/labdemos/" target="_blank" rel="noopener">Lab demos page</a>
         <a class="btn secondary" href="https://github.com/vgroenhuis/HandTool" target="_blank" rel="noopener">GitHub</a>
       </div>
@@ -90,14 +90,14 @@ input[type=number] { width: 90px; padding: 5px; border-radius: 5px; border: 1px 
   <div class="card">
     <h2>HTTP endpoints</h2>
     <ul class="endpoints">
-      <li><a href="/robotView.html">/robotView.html</a> 3D view (moves with the tool; sliders when it isn't connected)</li>
-      <li><a href="/allData">/allData</a> all data as JSON: raw and filtered ADC values, joint angles, end-effector matrix, battery</li>
-      <li><a href="/angles">/angles</a> joint angles in degrees, drag button</li>
-      <li><a href="/rawAdcValues">/rawAdcValues</a>, <a href="/filteredAdcValues">/filteredAdcValues</a> ADC readings</li>
-      <li><a href="/fk">/fk</a> end-effector to base transformation (4x4, metres)</li>
-      <li><a href="/dhParams">/dhParams</a> Denavit-Hartenberg parameters</li>
+      <li><a href="robotView.html">/robotView.html</a> 3D view (moves with the tool; sliders when it isn't connected)</li>
+      <li><a href="allData">/allData</a> all data as JSON: raw and filtered ADC values, joint angles, end-effector matrix, battery</li>
+      <li><a href="angles">/angles</a> joint angles in degrees, drag button</li>
+      <li><a href="rawAdcValues">/rawAdcValues</a>, <a href="filteredAdcValues">/filteredAdcValues</a> ADC readings</li>
+      <li><a href="fk">/fk</a> end-effector to base transformation (4x4, metres)</li>
+      <li><a href="dhParams">/dhParams</a> Denavit-Hartenberg parameters</li>
       <li><code>ws://&lt;address&gt;/ws</code> WebSocket: /allData 50 times a second (send any message to start)</li>
-      <li><a href="/api/state">/api/state</a> firmware, sensors, Wi-Fi, calibration</li>
+      <li><a href="api/state">/api/state</a> firmware, sensors, Wi-Fi, calibration</li>
       <li><code>POST /api/zero</code> (<code>?reset=1</code>), <code>GET/POST /api/calibration</code> zero calibration</li>
       <li><code>/serialAngles?enable=1</code>, <code>/serialFK?enable=1</code>, <code>/serialFrequency?hz=10</code> serial output</li>
     </ul>
@@ -131,7 +131,7 @@ function show(j) {
 
 let lastData = 0;
 function openSocket() {
-  const ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
+  const ws = new WebSocket(new URL('ws', location.href).href.replace(/^http/, 'ws'));
   ws.onopen = () => ws.send('stream');
   let shown = 0;
   ws.onmessage = (ev) => {
@@ -146,12 +146,12 @@ function openSocket() {
 openSocket();
 setInterval(async () => {   // fallback while the stream is silent
   if (Date.now() - lastData < 1500) return;
-  try { show(await (await fetch('/allData')).json()); } catch (e) {}
+  try { show(await (await fetch('allData')).json()); } catch (e) {}
 }, 500);
 
 async function refreshState() {
   try {
-    const s = await (await fetch('/api/state')).json();
+    const s = await (await fetch('api/state')).json();
     const parts = [`firmware ${s.fw}`];
     parts.push(s.adc_ok ? 'sensors <span class="pill ok">ok</span>' : 'sensors <span class="pill bad">MCP3008 not found</span>');
     parts.push(s.display_ok ? 'display <span class="pill ok">ok</span>' : 'display <span class="pill bad">not found</span>');
@@ -174,14 +174,14 @@ async function post(url, okText) {
   refreshState();
 }
 $('zeroBtn').onclick = () => {
-  if (confirm('Is the HandTool in its zero pose (all joints at 0 degrees, as in the 3D view)?')) post('/api/zero', 'Zero saved.');
+  if (confirm('Is the HandTool in its zero pose (all joints at 0 degrees, as in the 3D view)?')) post('api/zero', 'Zero saved.');
 };
-$('resetZeroBtn').onclick = () => post('/api/zero?reset=1', 'Factory zero restored.');
+$('resetZeroBtn').onclick = () => post('api/zero?reset=1', 'Factory zero restored.');
 
-$('serialAngles').onchange = (e) => fetch('/serialAngles?enable=' + (e.target.checked ? 1 : 0));
-$('serialFK').onchange = (e) => fetch('/serialFK?enable=' + (e.target.checked ? 1 : 0));
+$('serialAngles').onchange = (e) => fetch('serialAngles?enable=' + (e.target.checked ? 1 : 0));
+$('serialFK').onchange = (e) => fetch('serialFK?enable=' + (e.target.checked ? 1 : 0));
 $('serialHzBtn').onclick = async () => {
-  const r = await fetch('/serialFrequency?hz=' + $('serialHz').value);
+  const r = await fetch('serialFrequency?hz=' + $('serialHz').value);
   $('serialHzInfo').textContent = await r.text();
 };
 </script>
