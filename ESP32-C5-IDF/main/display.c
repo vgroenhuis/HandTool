@@ -154,7 +154,7 @@ static void header(const closer_demo_status_t *st, const sensor_snapshot_t *s) {
 static void joints(int y, const sensor_snapshot_t *s) {
     for (int i = 0; i < 6; i++) {
         int col = i % 3, row = i / 3;
-        int x = col * 45, yy = y + row * 10;      // "J1" then the angle right-aligned, 9 px before the next column
+        int x = col * 45, yy = y + row * 9;      // "J1" then the angle right-aligned, 9 px before the next column
         textf(x, yy, u8g2_font_5x8_tr, "J%d", i + 1);
         char v[8];
         snprintf(v, sizeof v, "%.0f", s->angles_deg[i]);
@@ -165,9 +165,9 @@ static void joints(int y, const sensor_snapshot_t *s) {
 static void position_line(int y, const sensor_snapshot_t *s) {
     textf(0, y, u8g2_font_6x10_tr, "x%.0f y%.0f z%.0f", s->T[0][3] * 1000, s->T[1][3] * 1000, s->T[2][3] * 1000);
     if (s->button) {
-        u8g2_DrawRBox(&u8g2, 104, y - 9, 24, 11, 2);
+        u8g2_DrawRBox(&u8g2, 104, y - 8, 24, 10, 2);
         u8g2_SetDrawColor(&u8g2, 0);
-        textf(107, y, u8g2_font_5x8_tr, "BTN");
+        textf(107, y - 1, u8g2_font_5x8_tr, "BTN");
         u8g2_SetDrawColor(&u8g2, 1);
     } else {
         text_right(127, y, u8g2_font_5x8_tr, "mm");
@@ -186,8 +186,8 @@ static void draw(const closer_demo_status_t *st, const sensor_snapshot_t *s, int
         textf(0, 32, u8g2_font_5x8_tr, "%d dBm  ch %d  %s", st->rssi, st->channel, st->channel > 14 ? "5 GHz" : "2.4 GHz");
         u8g2_DrawHLine(&u8g2, 0, 34, 128);
         if (s->valid) {
-            joints(44, s);
-            position_line(64, s);
+            joints(43, s);
+            position_line(61, s);      // (the 6x10 font's "y" reaches 2 rows below the baseline: row 63)
         } else {
             textf(0, 48, u8g2_font_helvB08_tr, "MCP3008 not found");
             textf(0, 60, u8g2_font_5x8_tr, "check the ADC wires");
