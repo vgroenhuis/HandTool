@@ -11,4 +11,4 @@ file(GLOB WEB_GZ "${WEB_OUT}/*.gz")
 idf_component_register(SRCS "main.c" "sensors.c" "kinematics.c" "display.c" "web.c"
                        INCLUDE_DIRS "." "${WEB_OUT}"
                        EMBED_FILES ${WEB_GZ}
-                       REQUIRES closer_demo u8g2 esp_http_server nvs_flash driver esp_driver_i2c esp_driver_spi esp_adc esp_driver_gpio json esp_timer)
+                       REQUIRES closer_demo u8g2 esp_http_server nvs_flash driver esp_driver_i2c esp_driver_spi esp_adc esp_driver_gpio cjson esp_timer)

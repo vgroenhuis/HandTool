@@ -28,7 +28,7 @@ Pins (menuconfig > HandTool): MCP3008 SCK=0, MOSI=8, MISO=7, CS=9 (1 MHz); SH110
 
 ## Build
 
-    . $IDF_PATH/export.sh            # ESP-IDF 5.5
+    . $IDF_PATH/export.sh            # ESP-IDF 6.1 (5.5 builds too)
     idf.py build
 
 ## First flash (USB)
