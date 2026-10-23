@@ -51,6 +51,10 @@ static struct {
     int roam_fail, roams;
     char wifi[48];              // what Wi-Fi is doing (closer_demo_status_t.wifi)
     int channel, attempts;
+    closer_wifi_phase_t phase;
+    bool ever_connected;
+    int64_t down_since_us;      // when the connection was lost (or start-up); 0 while connected
+    TaskHandle_t reporter;
 } S = {.clients = -1, .wifi = "Starting Wi-Fi"};
 
 // ------------------------------------------------------------------ flash settings
@@ -122,10 +126,20 @@ void closer_demo_get_status(closer_demo_status_t *out) {
     if (out->connected) {
         esp_netif_ip_info_t ip;
         esp_netif_t *sta = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
-        if (sta && esp_netif_get_ip_info(sta, &ip) == ESP_OK) snprintf(out->ip, sizeof out->ip, IPSTR, IP2STR(&ip.ip));
-        wifi_ap_record_t ap;
-        if (esp_wifi_sta_get_ap_info(&ap) == ESP_OK) out->rssi = ap.rssi;
+        if (sta && esp_netif_get_ip_info(sta, &ip) == ESP_OK) {
+            snprintf(out->ip, sizeof out->ip, IPSTR, IP2STR(&ip.ip));
+            snprintf(out->gateway, sizeof out->gateway, IPSTR, IP2STR(&ip.gw));
+        }
     }
+    wifi_ap_record_t ap;
+    if (S.channel && esp_wifi_sta_get_ap_info(&ap) == ESP_OK) {
+        out->rssi = ap.rssi;
+        snprintf(out->bssid, sizeof out->bssid, "%02x:%02x:%02x:%02x:%02x:%02x",
+                 ap.bssid[0], ap.bssid[1], ap.bssid[2], ap.bssid[3], ap.bssid[4], ap.bssid[5]);
+    }
+    out->phase = S.phase;
+    int64_t since = S.down_since_us;
+    out->down_s = since ? (int)((esp_timer_get_time() - since) / 1000000) : 0;
     if (S.lock) {
         xSemaphoreTake(S.lock, portMAX_DELAY);
         strlcpy(out->note, S.message, sizeof out->note);
@@ -139,6 +153,29 @@ void closer_demo_get_status(closer_demo_status_t *out) {
 
 bool closer_demo_wifi_connected(void) { return S.events && (xEventGroupGetBits(S.events) & WIFI_CONNECTED_BIT); }
 const char *closer_demo_version(void) { return S.version; }
+const char *closer_demo_name(void) { return S.hostname; }
+
+// Why the chip last started: sent with the "boot" report.
+const char *closer_demo_reset_reason(void) {
+    switch (esp_reset_reason()) {
+        case ESP_RST_POWERON: return "power_on";      // power applied (plugged in, or the supply went away and back)
+        case ESP_RST_EXT: return "reset_pin";
+        case ESP_RST_SW: return "software";           // esp_restart(): an update, or asked to
+        case ESP_RST_PANIC: return "crash";
+        case ESP_RST_INT_WDT: return "interrupt_watchdog";
+        case ESP_RST_TASK_WDT: return "task_watchdog";
+        case ESP_RST_WDT: return "watchdog";
+        case ESP_RST_DEEPSLEEP: return "deep_sleep";
+        case ESP_RST_BROWNOUT: return "brownout";     // the supply voltage dipped
+        case ESP_RST_SDIO: return "sdio";
+        case ESP_RST_USB: return "usb";
+        case ESP_RST_JTAG: return "jtag";
+        case ESP_RST_EFUSE: return "efuse";
+        case ESP_RST_PWR_GLITCH: return "power_glitch";
+        case ESP_RST_CPU_LOCKUP: return "cpu_lockup";
+        default: return "unknown";
+    }
+}
 
 // ------------------------------------------------------------------ Wi-Fi
 
@@ -185,6 +222,7 @@ static void wifi_event(void *arg, esp_event_base_t base, int32_t id, void *data)
     if (base == WIFI_EVENT && id == WIFI_EVENT_STA_CONNECTED) {
         wifi_event_sta_connected_t *e = data;
         S.channel = e->channel;
+        S.phase = CLOSER_WIFI_GETTING_IP;
         set_wifi_state("Getting an address");
         return;
     }
@@ -196,6 +234,8 @@ static void wifi_event(void *arg, esp_event_base_t base, int32_t id, void *data)
         if (esp_wifi_set_band_mode(WIFI_BAND_MODE_2G_ONLY) != ESP_OK) ESP_LOGW(TAG, "could not limit Wi-Fi to 2.4 GHz");
 #endif
         S.attempts = 1;
+        S.phase = CLOSER_WIFI_SEARCHING;
+        S.down_since_us = esp_timer_get_time();
         set_wifi_state("Searching for %s", S.ssid);
         esp_wifi_connect();
     } else if (base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED) {
@@ -203,6 +243,11 @@ static void wifi_event(void *arg, esp_event_base_t base, int32_t id, void *data)
         xEventGroupClearBits(S.events, WIFI_CONNECTED_BIT);
         S.channel = 0;
         S.attempts++;
+        if (!S.down_since_us) S.down_since_us = esp_timer_get_time();
+        bool auth = reason_text(e->reason)[0] == 'W';          // "Wrong password?"
+        S.phase = auth ? CLOSER_WIFI_AUTH_FAILED
+                : S.roam_pending ? CLOSER_WIFI_ROAMING
+                : S.ever_connected ? CLOSER_WIFI_RECONNECTING : CLOSER_WIFI_SEARCHING;
         set_wifi_state("%s (try %d)", reason_text(e->reason), S.attempts);
         ESP_LOGW(TAG, "Wi-Fi: %s (reason %d)", reason_text(e->reason), e->reason);
         ESP_LOGW(TAG, "Wi-Fi lost, reconnecting");
@@ -216,6 +261,10 @@ static void wifi_event(void *arg, esp_event_base_t base, int32_t id, void *data)
         ip_event_got_ip_t *e = data;
         ESP_LOGI(TAG, "Got address " IPSTR, IP2STR(&e->ip_info.ip));
         S.attempts = 0;
+        S.phase = CLOSER_WIFI_CONNECTED;
+        if (S.ever_connected && S.reporter) xTaskNotifyGive(S.reporter);     // back again: report now (new address?)
+        S.ever_connected = true;
+        S.down_since_us = 0;
         set_wifi_state("Connected");
         xEventGroupSetBits(S.events, WIFI_CONNECTED_BIT);
         if (S.roam_pending) clear_target();
@@ -260,8 +309,10 @@ static bool roam_scan(const wifi_ap_record_t *cur) {
                              .scan_time = {.active = {.min = 20, .max = CONFIG_CLOSER_ROAM_SCAN_CHANNEL_MS}},
                              .home_chan_dwell_time = CONFIG_CLOSER_ROAM_SCAN_DWELL_MS};
     closer_demo_set_stat("roam_scans", ++roam_scans);
+    S.phase = CLOSER_WIFI_SCANNING;
     set_wifi_state("Looking for a better AP");
     esp_err_t scanned = esp_wifi_scan_start(&sc, true);
+    if (S.phase == CLOSER_WIFI_SCANNING) S.phase = CLOSER_WIFI_CONNECTED;     // (unless the connection dropped meanwhile)
     set_wifi_state("Connected");
     if (scanned != ESP_OK) return false;
     uint16_t n = 0;
@@ -289,6 +340,7 @@ static bool roam_scan(const wifi_ap_record_t *cur) {
             S.roam_fail = 0;
             S.roams++;
             closer_demo_set_stat("roams", S.roams);
+            S.phase = CLOSER_WIFI_ROAMING;
             set_wifi_state("Moving to a stronger AP");
             esp_wifi_disconnect();                    // the Wi-Fi event handler reconnects, to the chosen one
             moved = true;
@@ -296,6 +348,22 @@ static bool roam_scan(const wifi_ap_record_t *cur) {
     }
     free(recs);
     return moved;
+}
+
+static SemaphoreHandle_t scan_lock;      // one scan at a time (roaming or survey)
+
+esp_err_t closer_demo_scan_all(wifi_ap_record_t *out, uint16_t *n) {
+    if (!closer_demo_wifi_connected() || !scan_lock || xSemaphoreTake(scan_lock, 0) != pdTRUE) return ESP_ERR_INVALID_STATE;
+    wifi_scan_config_t sc = {.show_hidden = false, .scan_type = WIFI_SCAN_TYPE_ACTIVE,
+                             .scan_time = {.active = {.min = 20, .max = CONFIG_CLOSER_ROAM_SCAN_CHANNEL_MS}},
+                             .home_chan_dwell_time = CONFIG_CLOSER_ROAM_SCAN_DWELL_MS};
+    S.phase = CLOSER_WIFI_SCANNING;
+    esp_err_t e = esp_wifi_scan_start(&sc, true);
+    if (S.phase == CLOSER_WIFI_SCANNING) S.phase = CLOSER_WIFI_CONNECTED;
+    if (e == ESP_OK) e = esp_wifi_scan_get_ap_records(n, out);       // (sorted by signal; frees the rest)
+    else *n = 0;
+    xSemaphoreGive(scan_lock);
+    return e;
 }
 
 static void roam_task(void *arg) {
@@ -310,8 +378,9 @@ static void roam_task(void *arg) {
             int64_t now = esp_timer_get_time() / 1000000;
             bool periodic = CONFIG_CLOSER_ROAM_PERIODIC_S > 0 && now - last_scan >= CONFIG_CLOSER_ROAM_PERIODIC_S;
             bool weak = cur.rssi < CONFIG_CLOSER_ROAM_RSSI && now - last_scan >= weak_wait;
-            if (first || periodic || weak) {
+            if ((first || periodic || weak) && xSemaphoreTake(scan_lock, pdMS_TO_TICKS(20000)) == pdTRUE) {
                 bool moved = roam_scan(&cur);
+                xSemaphoreGive(scan_lock);
                 first = false;
                 last_scan = esp_timer_get_time() / 1000000;
                 if (moved) weak_wait = 60;
@@ -366,6 +435,7 @@ static void set_auth(esp_http_client_handle_t c) {
 static char *build_report(const char *event) {
     cJSON *j = cJSON_CreateObject();
     cJSON_AddStringToObject(j, "event", event);
+    if (strcmp(event, "boot") == 0) cJSON_AddStringToObject(j, "reset", closer_demo_reset_reason());
     esp_netif_ip_info_t ip;
     esp_netif_t *sta = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
     if (sta && esp_netif_get_ip_info(sta, &ip) == ESP_OK) {
@@ -513,6 +583,24 @@ static bool report(const char *event) {
     return ok;
 }
 
+int closer_demo_post(const char *path, const char *body, size_t len) {
+    if (!closer_demo_wifi_connected()) return -1;
+    char url[192];
+    snprintf(url, sizeof url, "%s%s", S.base, path);
+    char resp[256] = {0};
+    rx_t rx = {.buf = resp, .cap = sizeof resp};
+    esp_http_client_config_t cfg = {.url = url, .method = HTTP_METHOD_POST, .event_handler = on_http, .user_data = &rx,
+                                    .crt_bundle_attach = esp_crt_bundle_attach, .timeout_ms = 15000};
+    esp_http_client_handle_t c = esp_http_client_init(&cfg);
+    if (!c) return -1;
+    set_auth(c);
+    esp_http_client_set_header(c, "Content-Type", "application/json");
+    esp_http_client_set_post_field(c, body, len);
+    int status = esp_http_client_perform(c) == ESP_OK ? esp_http_client_get_status_code(c) : -1;
+    esp_http_client_cleanup(c);
+    return status;
+}
+
 static void report_task(void *arg) {
     xEventGroupWaitBits(S.events, WIFI_CONNECTED_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
     time_sync();
@@ -526,7 +614,7 @@ static void report_task(void *arg) {
                 ESP_LOGI(TAG, "Firmware %s confirmed", S.version);
             }
         }
-        vTaskDelay(pdMS_TO_TICKS(S.pending_verify ? 15000 : CONFIG_CLOSER_INTERVAL_S * 1000));
+        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(S.pending_verify ? 15000 : CONFIG_CLOSER_INTERVAL_S * 1000));
     }
 }
 
@@ -550,10 +638,18 @@ esp_err_t closer_demo_start(const char *hostname) {
     }
     ESP_ERROR_CHECK(err);
     S.lock = xSemaphoreCreateMutex();
+    scan_lock = xSemaphoreCreateMutex();
     S.events = xEventGroupCreate();
-    strlcpy(S.hostname, hostname, sizeof S.hostname);
     strlcpy(S.version, esp_app_get_description()->version, sizeof S.version);
     load_settings();
+    // The name: given, or the demo id at the front of the device key ("turtle-2.<secret>"), so one firmware serves
+    // several boards.
+    if (hostname && hostname[0]) strlcpy(S.hostname, hostname, sizeof S.hostname);
+    else {
+        size_t n = strcspn(S.key, ".");
+        if (n == 0 || n >= sizeof S.hostname) strlcpy(S.hostname, "closer-demo", sizeof S.hostname);
+        else { memcpy(S.hostname, S.key, n); S.hostname[n] = 0; }
+    }
     if (!S.ssid[0] || !S.key[0]) ESP_LOGE(TAG, "No Wi-Fi network or device key in flash: see tools/provision.py");
 
     esp_ota_img_states_t state;
@@ -569,7 +665,7 @@ esp_err_t closer_demo_start(const char *hostname) {
     }
     ESP_LOGI(TAG, "Firmware %s%s", S.version, S.pending_verify ? " (new, unconfirmed)" : "");
     wifi_start();
-    xTaskCreate(report_task, "report", 8192, NULL, 4, NULL);
+    xTaskCreate(report_task, "report", 8192, NULL, 4, &S.reporter);
 #if CONFIG_CLOSER_ROAMING
     xTaskCreate(roam_task, "roam", 4096, NULL, 3, NULL);
 #endif
